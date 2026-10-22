@@ -1,0 +1,793 @@
+{% extends "kinetics/base.html" %}
+{% load static %}
+{% block title %}Apollinex — Рабочее пространство{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .workspace {
+            min-width: 0;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px 28px 16px;
+        }
+
+        .workspace-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 19px;
+        }
+
+        .page-title {
+            margin: 0;
+            color: #10213b;
+            font-size: clamp(25px, 2.7vw, 32px);
+            font-weight: 750;
+            letter-spacing: -1.2px;
+            line-height: 1.2;
+        }
+
+        .page-subtitle {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .project-chip {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 215px;
+            padding: 9px 13px;
+            border: 1px solid #dce9f7;
+            border-radius: 12px;
+            background: rgb(255 255 255 / 84%);
+            box-shadow: var(--shadow);
+        }
+
+        .project-chip-icon {
+            display: grid;
+            width: 34px;
+            height: 34px;
+            flex: 0 0 34px;
+            place-items: center;
+            border-radius: 9px;
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
+        .project-chip-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .project-chip strong,
+        .project-chip span {
+            display: block;
+        }
+
+        .project-chip strong {
+            color: var(--ink);
+            font-size: 12px;
+        }
+
+        .project-chip span {
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .metric-card,
+        .card {
+            min-width: 0;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--white);
+            box-shadow: var(--shadow);
+        }
+
+        .metric-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 90px;
+            padding: 14px 16px;
+        }
+
+        .metric-icon {
+            display: grid;
+            width: 43px;
+            height: 43px;
+            flex: 0 0 43px;
+            place-items: center;
+            border-radius: 10px;
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
+        .metric-icon svg {
+            width: 21px;
+            height: 21px;
+        }
+
+        .metric-icon.success {
+            background: #e9f7f0;
+            color: var(--green);
+        }
+
+        .metric-label {
+            display: block;
+            color: #526782;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .metric-value {
+            display: block;
+            margin-top: 4px;
+            color: #142642;
+            font-size: 21px;
+            font-weight: 750;
+            letter-spacing: -0.55px;
+            line-height: 1.15;
+        }
+
+        .metric-value.status-ok {
+            color: var(--green);
+            font-size: 16px;
+            letter-spacing: 0;
+        }
+
+        .metric-note {
+            display: block;
+            margin-top: 3px;
+            color: #92a1b7;
+            font-size: 10px;
+            line-height: 1.3;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 0.87fr) minmax(0, 1.3fr);
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .card {
+            padding: 19px;
+        }
+
+        .card-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 0 14px;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-width: 0;
+            margin: 0;
+            color: #182b49;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.25px;
+        }
+
+        .card-title-icon {
+            width: 20px;
+            height: 20px;
+            flex: 0 0 20px;
+            color: var(--blue);
+        }
+
+        .upload-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 318px;
+            overflow: hidden;
+        }
+
+        .upload-intro {
+            margin: -4px 0 12px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .upload-form {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .drop-area {
+            position: relative;
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 142px;
+            padding: 15px 108px 15px 14px;
+            border: 1px dashed #9fc5f7;
+            border-radius: 9px;
+            background: linear-gradient(145deg, #f7fbff, #f0f7ff);
+            color: var(--ink);
+            text-align: center;
+            cursor: pointer;
+            transition: background 160ms ease, border-color 160ms ease;
+        }
+
+        .drop-area:hover,
+        .drop-area:focus-within {
+            border-color: var(--blue);
+            background: #edf6ff;
+        }
+
+        .xlsx-icon {
+            width: 42px;
+            height: 48px;
+            margin-bottom: 7px;
+            color: #6592ca;
+        }
+
+        .drop-title {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .drop-hint {
+            margin-top: 2px;
+            color: #8b9bb1;
+            font-size: 11px;
+        }
+
+        .file-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            clip-path: inset(50%);
+        }
+
+        .upload-mouse {
+            position: absolute;
+            right: 8px;
+            bottom: 49px;
+            z-index: 1;
+            width: 112px;
+            height: auto;
+            pointer-events: none;
+        }
+
+        .primary-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            width: 100%;
+            min-height: 42px;
+            padding: 9px 16px;
+            border: 0;
+            border-radius: 8px;
+            background: linear-gradient(100deg, #287bdc, #2169c4);
+            box-shadow: 0 4px 10px rgb(39 120 220 / 18%);
+            color: var(--white);
+            font-weight: 650;
+            cursor: pointer;
+            transition: filter 150ms ease, transform 150ms ease;
+        }
+
+        .primary-button:hover {
+            filter: brightness(1.05);
+        }
+
+        .primary-button:active {
+            transform: translateY(1px);
+        }
+
+        .primary-button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .chart-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 318px;
+        }
+
+        .chart-frame {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+            min-height: 225px;
+            overflow: hidden;
+            border: 1px solid #e6edf6;
+            border-radius: 9px;
+            background: #fff;
+        }
+
+        .chart-image {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            max-height: 300px;
+            object-fit: contain;
+        }
+
+        .chart-empty {
+            width: 100%;
+            padding: 30px 16px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .chart-empty svg {
+            display: block;
+            width: 45px;
+            height: 45px;
+            margin: 0 auto 9px;
+            color: #9bb9dc;
+        }
+
+        .chart-legend {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin: 10px 0 0 3px;
+            color: #536883;
+            font-size: 11px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2980e8;
+        }
+
+        .file-card,
+        .data-card {
+            margin-top: 12px;
+        }
+
+        .file-details {
+            margin: 0;
+            border: 1px solid #e8eef6;
+            border-radius: 8px;
+        }
+
+        .file-row {
+            display: grid;
+            grid-template-columns: minmax(105px, 0.9fr) minmax(0, 1.1fr);
+            gap: 10px;
+            align-items: center;
+            min-height: 36px;
+            padding: 7px 10px;
+        }
+
+        .file-row + .file-row {
+            border-top: 1px solid #edf1f7;
+        }
+
+        .file-row dt,
+        .file-row dd {
+            min-width: 0;
+            margin: 0;
+            overflow-wrap: anywhere;
+            font-size: 11px;
+        }
+
+        .file-row dt {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #8596ae;
+        }
+
+        .file-row dt svg {
+            width: 15px;
+            height: 15px;
+            flex: 0 0 15px;
+            color: #8199b8;
+        }
+
+        .file-row dd {
+            color: #263955;
+            font-weight: 650;
+        }
+
+        .inline-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--green);
+        }
+
+        .inline-status svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            max-height: 280px;
+            overflow: auto;
+            border: 1px solid #e2eaf4;
+            border-radius: 8px;
+        }
+
+        .data-table {
+            width: 100%;
+            min-width: 360px;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 6px 14px;
+            border-bottom: 1px solid #edf1f7;
+            text-align: left;
+        }
+
+        .data-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #eaf1fb;
+            color: #243a59;
+            font-weight: 700;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background: #f6f9fd;
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .empty-state {
+            display: grid;
+            min-height: 91px;
+            place-items: center;
+            padding: 18px;
+            border: 1px dashed #d4dfed;
+            border-radius: 8px;
+            background: #f8fafd;
+            color: #8393a9;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .alert {
+            margin: 0 0 14px;
+            padding: 11px 14px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .alert.success {
+            border-color: #bfe7d1;
+            background: #effaf4;
+            color: #167345;
+        }
+
+        .alert.error {
+            border-color: #f0c9c7;
+            background: #fff3f2;
+            color: #a53532;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 15px;
+            padding: 0 2px;
+            color: #8091a8;
+            font-size: 10px;
+        }
+
+        .footer strong {
+            color: #617997;
+            font-weight: 650;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            clip-path: inset(50%);
+        }
+
+        @media (min-width: 1500px) {
+            .workspace {
+                padding-right: 38px;
+                padding-left: 38px;
+            }
+        }
+
+        @media (max-width: 1120px) {
+            .workspace {
+                padding-right: 20px;
+                padding-left: 20px;
+            }
+
+            .metric-card {
+                gap: 9px;
+                padding: 12px 10px;
+            }
+
+            .metric-icon {
+                width: 37px;
+                height: 37px;
+                flex-basis: 37px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.2fr);
+            }
+        }
+
+        @media (max-width: 860px) {
+            .workspace {
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 660px) {
+            .workspace {
+                padding: 19px 14px 14px;
+            }
+
+            .workspace-header {
+                align-items: flex-start;
+                margin-bottom: 14px;
+            }
+
+            .page-title {
+                font-size: 25px;
+            }
+
+            .page-subtitle {
+                max-width: 340px;
+                font-size: 12px;
+            }
+
+            .project-chip {
+                min-width: 0;
+                padding: 7px;
+            }
+
+            .project-chip > div:last-child {
+                display: none;
+            }
+
+            .metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .metric-card {
+                min-height: 76px;
+                padding: 10px;
+            }
+
+            .metric-value {
+                font-size: 18px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .upload-card,
+            .chart-card {
+                min-height: 290px;
+            }
+
+            .file-card,
+            .data-card {
+                margin-top: 10px;
+            }
+
+            .card {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .workspace-header {
+                gap: 8px;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+
+            .page-subtitle {
+                font-size: 11px;
+            }
+
+            .metric-card {
+                gap: 7px;
+            }
+
+            .metric-icon {
+                width: 32px;
+                height: 32px;
+                flex-basis: 32px;
+            }
+
+            .metric-label,
+            .metric-note {
+                font-size: 9px;
+            }
+
+            .metric-value {
+                font-size: 16px;
+            }
+
+            .metric-value.status-ok {
+                font-size: 13px;
+            }
+
+            .footer {
+                flex-direction: column;
+                gap: 3px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+            <main class="workspace" id="overview">
+            <header class="workspace-header">
+                <div>
+                    <h1 class="page-title">Рабочее пространство</h1>
+                    <p class="page-subtitle">Анализ и моделирование кинетики высвобождения</p>
+                </div>
+                <div class="project-chip" aria-label="Apollinex — наука в каждом эксперименте">
+                    <div class="project-chip-icon">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3h6m-5 0v6l-5.5 9.2A1.8 1.8 0 0 0 6 21h12a1.8 1.8 0 0 0 1.5-2.8L14 9V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 16h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    </div>
+                    <div><strong>Apollinex</strong><span>Наука в каждом эксперименте</span></div>
+                </div>
+            </header>
+
+            {% if success %}
+                <div class="alert success" role="status">{{ success }}</div>
+            {% endif %}
+            {% if error %}
+                <div class="alert error" role="alert">{{ error }}</div>
+            {% endif %}
+
+            <section class="metrics" aria-label="Показатели эксперимента">
+                <article class="metric-card">
+                    <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3" stroke="currentColor" stroke-width="1.8"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5m-16 7v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7" stroke="currentColor" stroke-width="1.8"/></svg></div>
+                    <div><span class="metric-label">Точек данных</span><strong class="metric-value">{% if data %}{{ row_count }}{% else %}—{% endif %}</strong><span class="metric-note">{% if data %}Экспериментальных значений{% else %}После загрузки файла{% endif %}</span></div>
+                </article>
+                <article class="metric-card">
+                    <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                    <div><span class="metric-label">Временной диапазон</span><strong class="metric-value">{% if data %}{{ time_min|floatformat:"-2" }}–{{ time_max|floatformat:"-2" }}{% else %}—{% endif %}</strong><span class="metric-note">Единицы времени из файла</span></div>
+                </article>
+                <article class="metric-card">
+                    <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 18 9 12l4 3 8-9m-6 0h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                    <div><span class="metric-label">Максимальное высвобождение</span><strong class="metric-value">{% if data %}{{ max_release|floatformat:"-1" }}%{% else %}—{% endif %}</strong><span class="metric-note">Наибольшее измеренное значение</span></div>
+                </article>
+                <article class="metric-card">
+                    <div class="metric-icon success"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="m8 12 2.5 2.5L16.5 9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                    <div><span class="metric-label">Статус данных</span><strong class="metric-value status-ok">{% if data %}Проверены{% else %}Ожидание{% endif %}</strong><span class="metric-note">{% if data %}Файл загружен успешно{% else %}Загрузите файл .xlsx{% endif %}</span></div>
+                </article>
+            </section>
+
+            <div class="dashboard-grid">
+                <section class="card upload-card" aria-labelledby="upload-title">
+                    <div class="card-heading">
+                        <h2 class="card-title" id="upload-title">
+                            <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Загрузка Excel-файла
+                        </h2>
+                    </div>
+                    <p class="upload-intro">Поддерживается формат .xlsx. Выберите файл с экспериментальными данными.</p>
+                    <form class="upload-form" action="/upload/" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <label class="drop-area" for="excel-file">
+                            <svg class="xlsx-icon" viewBox="0 0 48 56" fill="none" aria-hidden="true"><path d="M10 2h19l15 15v34a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="white" stroke="currentColor" stroke-width="2.5"/><path d="M29 2v15h15" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><rect x="3" y="28" width="31" height="19" rx="3" fill="#5D8FCB"/><path d="m12 33 5 9m0-9-5 9m12-9v9m0-4h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+                            <span class="drop-title" id="file-name">Выберите файл .xlsx</span>
+                            <span class="drop-hint">Нажмите, чтобы найти файл на компьютере</span>
+                            <input class="file-input" id="excel-file" type="file" name="file" accept=".xlsx" required>
+                        </label>
+                        <button class="primary-button" type="submit">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h4l2 2H18.5A1.5 1.5 0 0 1 20 9.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                            Загрузить файл
+                        </button>
+                    </form>
+                    <img class="upload-mouse" src="{% static 'kinetics/mouse-researcher.svg' %}" alt="">
+                </section>
+
+                <section class="card chart-card" aria-labelledby="chart-title">
+                    <div class="card-heading">
+                        <h2 class="card-title" id="chart-title">
+                            <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 19h18M5 16l5-5 4 3 6-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 6h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Кинетика высвобождения
+                        </h2>
+                    </div>
+                    <div class="chart-frame">
+                        {% if plot %}
+                            <img class="chart-image" src="data:image/png;base64,{{ plot }}" alt="График кинетики высвобождения по экспериментальным данным">
+                        {% else %}
+                            <div class="chart-empty">
+                                <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M6 39h36M9 34l9-10 8 6 13-17" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="39" cy="13" r="3" fill="currentColor"/></svg>
+                                График появится после загрузки экспериментальных данных.
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="chart-legend"><span class="legend-dot"></span>Экспериментальные данные</div>
+                </section>
+
+                <section class="card file-card" aria-labelledby="file-info-title">
+                    <div class="card-heading">
+                        <h2 class="card-title" id="file-info-title">
+                            <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h8l5 5v13H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v6h6M8 13h8m-8 4h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                            Информация о файле
+                        </h2>
+                    </div>
+                    {% if filename %}
+                        <dl class="file-details">
+                            <div class="file-row"><dt><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h8l5 5v13H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8"/><path d="M14 3v6h6" stroke="currentColor" stroke-width="1.8"/></svg>Имя файла</dt><dd>{{ filename }}</dd></div>
+                            <div class="file-row"><dt><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8m-8 4h8m-8 3h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Количество строк</dt><dd>{{ row_count }}</dd></div>
+                            <div class="file-row"><dt><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16v12H4zM8 6v12m5-12v12m-9-8h16" stroke="currentColor" stroke-width="1.8"/></svg>Формат</dt><dd>.xlsx</dd></div>
+                            <div class="file-row"><dt><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="m8 12 2.5 2.5L16.5 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Статус</dt><dd><span class="inline-status"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12 3 3 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Загружен и проверен</span></dd></div>
+                        </dl>
+                    {% else %}
+                        <div class="empty-state">Информация о файле появится после успешной загрузки.</div>
+                    {% endif %}
+                </section>
+
+            </div>
+
+            <footer class="footer">
+                <span><strong>Apollinex</strong> &nbsp; v1.0 &nbsp;|&nbsp; Kinetics Analysis Platform</span>
+                <span>Малые детали — большие открытия</span>
+            </footer>
+        </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fileInput = document.getElementById("excel-file");
+    const fileName = document.getElementById("file-name");
+    fileInput.addEventListener("change", () => {
+        fileName.textContent = fileInput.files.length
+            ? fileInput.files[0].name
+            : "Выберите файл .xlsx";
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*py[cod]
+
+# Virtyal environmet
+.venv/
+venv/
+# Secrets
+.env
+.env.*
+
+#Django database and user files
+db.sqlite3
+media/
+
+# IDE
+.vscode/
+
+# Logs
+*.log

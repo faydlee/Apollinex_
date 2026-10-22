@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#12233b">
+
+    <style>
+        :root {
+            color-scheme: light;
+            --navy: #12233d;
+            --navy-light: #1b3456;
+            --blue: #2778dc;
+            --blue-dark: #1e63bc;
+            --blue-soft: #edf5ff;
+            --ink: #162944;
+            --muted: #71839f;
+            --line: #e2eaf4;
+            --canvas: #f4f8fd;
+            --white: #fff;
+            --green: #168754;
+            --shadow: 0 7px 22px rgb(29 70 123 / 8%);
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-width: 320px;
+            min-height: 100vh;
+            margin: 0;
+            background: var(--canvas);
+            color: var(--ink);
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button:focus-visible,
+        input:focus-visible,
+        a:focus-visible,
+        label:focus-within {
+            outline: 3px solid #91c6ff;
+            outline-offset: 3px;
+        }
+
+        .app-shell {
+            display: grid;
+            grid-template-columns: 252px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        .app-shell > main {
+            grid-column: 2;
+            min-width: 0;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            width: 252px;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior-y: contain;
+            padding: 24px 15px 16px;
+            background:
+                radial-gradient(ellipse at 6% 92%, rgb(61 120 184 / 20%), transparent 35%),
+                linear-gradient(165deg, var(--navy), #0d1c31 100%);
+            color: #dce8f8;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            min-height: 0;
+            margin: 0 0 25px;
+            color: var(--white);
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            display: block;
+            width: 208px;
+            height: 104px;
+            flex: 0 0 auto;
+            object-fit: contain;
+        }
+
+        .brand-copy {
+            min-width: 0;
+            text-align: center;
+        }
+
+        .brand-name {
+            display: block;
+            font-size: 22px;
+            font-weight: 750;
+            letter-spacing: -0.8px;
+            line-height: 1.1;
+        }
+
+        .brand-name span {
+            color: #67b5ff;
+        }
+
+        .brand-caption {
+            display: block;
+            margin-top: 3px;
+            color: #8fa7c6;
+            font-size: 9px;
+            letter-spacing: 1.35px;
+            text-transform: uppercase;
+        }
+
+        .nav-label {
+            margin: 0 12px 9px;
+            color: #8197b4;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        .nav-list {
+            display: grid;
+            gap: 5px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 42px;
+            padding: 0 12px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: #b3c2d7;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .nav-item[aria-current="page"] {
+            border-color: rgb(113 184 250 / 48%);
+            background: linear-gradient(90deg, rgb(42 119 197 / 38%), rgb(52 96 145 / 27%));
+            box-shadow: inset 3px 0 #44a9ff;
+            color: var(--white);
+        }
+
+        .nav-item.is-inactive {
+            color: #97a8be;
+            cursor: default;
+        }
+
+        .nav-icon {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 18px;
+            color: #a9bed9;
+        }
+
+        .nav-item[aria-current="page"] .nav-icon {
+            color: #8bcaff;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+        }
+
+        .nav-divider {
+            height: 1px;
+            margin: 17px 9px;
+            border: 0;
+            background: rgb(179 202 229 / 16%);
+        }
+
+        .sidebar-art {
+            width: 100%;
+            max-width: 204px;
+            height: auto;
+            margin: 12px auto 0;
+            filter: drop-shadow(0 8px 16px rgb(1 10 23 / 24%));
+            opacity: 0.94;
+        }
+
+        @media (max-width: 1120px) {
+            .app-shell {
+                grid-template-columns: 208px minmax(0, 1fr);
+            }
+
+            .sidebar {
+                width: 208px;
+            }
+
+            .brand-mark {
+                width: 178px;
+                height: 90px;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .app-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .app-shell > main {
+                grid-column: 1;
+            }
+
+            .sidebar {
+                position: relative;
+                top: auto;
+                right: auto;
+                bottom: auto;
+                left: auto;
+                grid-column: 1;
+                width: auto;
+                height: auto;
+                min-height: auto;
+                overflow: hidden;
+                padding: 10px 15px;
+            }
+
+            .brand {
+                min-height: 0;
+                margin: 0 auto 12px;
+            }
+
+            .brand-mark {
+                width: 178px;
+                height: 86px;
+                flex-basis: auto;
+            }
+
+            .brand-name {
+                font-size: 19px;
+            }
+
+            .nav-label,
+            .sidebar-bottom,
+            .sidebar-art {
+                display: none;
+            }
+
+            .nav-list {
+                display: flex;
+                gap: 5px;
+                overflow-x: auto;
+                padding-bottom: 2px;
+            }
+
+            .nav-item {
+                flex: 0 0 auto;
+                min-height: 38px;
+                padding: 0 10px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .brand-caption {
+                font-size: 8px;
+            }
+
+            .nav-item {
+                gap: 7px;
+                font-size: 12px;
+            }
+
+            .nav-icon {
+                width: 16px;
+                height: 16px;
+                flex-basis: 16px;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+    
+    <title>{% block title %}Apollinex{% endblock %}</title>
+</head>
+<body>
+    {% block layout %}
+        <div class="app-shell">
+            {% include "kinetics/sidebar.html" %}
+            {% block content %}{% endblock %}
+        </div>
+    {% endblock %}
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,185 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}Данные — Apollinex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .data-workspace {
+        width: 100%;
+        max-width: 1600px;
+        min-width: 0;
+        margin: 0 auto;
+        padding: 32px 30px;
+    }
+
+    .data-header {
+        margin-bottom: 20px;
+    }
+
+    .data-title {
+        margin: 0;
+        color: #10213b;
+        font-size: clamp(25px, 2.7vw, 32px);
+        font-weight: 750;
+        letter-spacing: -1.2px;
+        line-height: 1.2;
+    }
+
+    .data-subtitle {
+        margin: 6px 0 0;
+        color: var(--muted);
+    }
+
+    .data-card {
+        min-width: 0;
+        padding: 21px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--white);
+        box-shadow: var(--shadow);
+    }
+
+    .data-card h2 {
+        margin: 0 0 16px;
+        color: #182b49;
+        font-size: 17px;
+    }
+
+    .data-file-summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .data-file-item {
+        min-width: 0;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #f8fafd;
+    }
+
+    .data-file-label,
+    .data-file-value {
+        display: block;
+        overflow-wrap: anywhere;
+    }
+
+    .data-file-label {
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+    .data-file-value {
+        color: var(--ink);
+        font-weight: 650;
+    }
+
+    .data-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+    }
+
+    .data-table {
+        width: 100%;
+        min-width: 360px;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid #edf1f7;
+        text-align: left;
+    }
+
+    .data-table th {
+        background: #eaf1fb;
+        color: #243a59;
+        font-weight: 700;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+        background: #f6f9fd;
+    }
+
+    .data-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .data-empty {
+        padding: 24px;
+        border: 1px dashed #d4dfed;
+        border-radius: 9px;
+        background: #f8fafd;
+        color: var(--muted);
+        text-align: center;
+    }
+
+    @media (max-width: 660px) {
+        .data-workspace {
+            padding: 24px 14px;
+        }
+
+        .data-file-summary {
+            grid-template-columns: 1fr;
+        }
+
+        .data-card {
+            padding: 16px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="data-workspace">
+    <header class="data-header">
+        <h1 class="data-title">Экспериментальные данные</h1>
+        <p class="data-subtitle">Загруженные точки измерений и информация об исходном файле.</p>
+    </header>
+
+    <section class="data-card" aria-labelledby="data-table-title">
+        <h2 id="data-table-title">Данные эксперимента</h2>
+        {% if data %}
+            <div class="data-file-summary">
+                <div class="data-file-item">
+                    <span class="data-file-label">Имя файла</span>
+                    <span class="data-file-value">{{ filename }}</span>
+                </div>
+                <div class="data-file-item">
+                    <span class="data-file-label">Количество строк</span>
+                    <span class="data-file-value">{{ row_count }}</span>
+                </div>
+            </div>
+            <div class="data-table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Время</th>
+                            <th scope="col">Высвобождение (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in data %}
+                            <tr>
+                                <td>{{ row.time }}</td>
+                                <td>{{ row.release }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="data-empty">
+                Данные пока не загружены. Загрузите файл .xlsx на главной странице.
+            </div>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}
