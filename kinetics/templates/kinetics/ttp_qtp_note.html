@@ -1,0 +1,9 @@
+<div class="kinetic-metric-grid">
+    <div class="kinetic-metric"><span class="kinetic-metric-label">TTP</span><span class="kinetic-metric-value">{% if ttp is not None %}{{ ttp_display }}{% else %}Не рассчитан{% endif %}</span></div>
+    <div class="kinetic-metric"><span class="kinetic-metric-label">QTP</span><span class="kinetic-metric-value">{% if qtp is not None %}{{ qtp_display }}{% else %}Не рассчитан{% endif %}</span></div>
+</div>
+{% if ttp is not None and qtp is not None %}
+    <p class="kinetic-model-note">Порог P = Q<sub>last</sub> − SD<sub>last</sub>/2 = {{ ttp_qtp_threshold_display }}. TTP и QTP используют единицы времени и высвобождения из исходного файла.</p>
+{% elif ttp_qtp_message %}
+    <p class="kinetic-unavailable">{{ ttp_qtp_message }}</p>
+{% endif %}

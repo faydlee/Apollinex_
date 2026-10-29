@@ -17,7 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+# Корневой URLconf связывает адреса проекта с админкой и маршрутами kinetics.
 urlpatterns = [
+    # Встроенная административная панель Django.
     path("admin/", admin.site.urls),
+    # Остальные адреса делегируются URLconf приложения kinetics.
     path("", include("kinetics.urls")),
 ]

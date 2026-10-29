@@ -1,0 +1,27 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}Вход — Apollinex{% endblock %}
+
+{% block content %}
+<main class="auth-workspace">
+    <section class="auth-card" aria-labelledby="login-title">
+        <h1 id="login-title">Войти</h1>
+        <p>Войдите, чтобы открыть свои эксперименты.</p>
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="site-message error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            {% for field in form %}
+                <p>
+                    {{ field.label_tag }}<br>
+                    {{ field }}
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                    {% for error in field.errors %}<span class="site-message error" role="alert">{{ error }}</span>{% endfor %}
+                </p>
+            {% endfor %}
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            <button class="auth-submit" type="submit">Войти</button>
+        </form>
+        <p>Нет учётной записи? <a href="{% url 'register' %}">Зарегистрироваться</a>.</p>
+    </section>
+</main>
+{% endblock %}

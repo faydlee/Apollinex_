@@ -10,26 +10,112 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
+import secrets
+import sys
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+# BASE_DIR указывает на корень проекта и используется для путей к базе и файлам.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _env_flag(name, default):
+    """Read a strict boolean environment setting and reject typos early."""
+
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ImproperlyConfigured(
+        f"Переменная {name} должна содержать true/false или 1/0."
+    )
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-sjdo0ez9av6y6+m8fzooitm!#=5-9f!7&60oriuay5=!z!d+j3'
+# Локальный сервер, Django-тесты и обычная команда check используют профиль
+# разработки, если DJANGO_DEBUG не задан. `check --deploy` и процессы WSGI/ASGI
+# сохраняют DEBUG=False по умолчанию, поэтому production-переменные обязательны.
+MANAGEMENT_COMMAND = sys.argv[1] if len(sys.argv) > 1 else ""
+RUNSERVER_COMMAND = MANAGEMENT_COMMAND == "runserver"
+TEST_COMMAND = MANAGEMENT_COMMAND == "test"
+LOCAL_CHECK_COMMAND = (
+    MANAGEMENT_COMMAND == "check" and "--deploy" not in sys.argv[2:]
+)
+LOCAL_SETTINGS_COMMAND = (
+    RUNSERVER_COMMAND or TEST_COMMAND or LOCAL_CHECK_COMMAND
+)
+DEBUG = _env_flag("DJANGO_DEBUG", LOCAL_SETTINGS_COMMAND)
+# Keep the selected local/production experiment-access policy stable while
+# Django's test runner temporarily sets DEBUG=False for test rendering.
+APOLLINEX_ALLOW_GUEST_UNOWNED_EXPERIMENTS = DEBUG
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            "Для production задайте переменную DJANGO_SECRET_KEY."
+        )
+    SECRET_KEY = secrets.token_urlsafe(48)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+if not ALLOWED_HOSTS:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            "Для production задайте список DJANGO_ALLOWED_HOSTS."
+        )
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
 
-ALLOWED_HOSTS = []
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+# Локальная разработка всегда работает по HTTP и не доверяет заголовкам прокси.
+# Production по умолчанию требует HTTPS; прокси-настройки применяются только
+# при DEBUG=False, чтобы случайный профиль IDE не создавал HTTPS-редирект.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = (
+    False
+    if DEBUG
+    else _env_flag("DJANGO_SECURE_SSL_REDIRECT", True)
+)
+PREPEND_WWW = (
+    False
+    if DEBUG
+    else _env_flag("DJANGO_PREPEND_WWW", False)
+)
+SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0"))
+if SECURE_HSTS_SECONDS < 0:
+    raise ImproperlyConfigured("DJANGO_SECURE_HSTS_SECONDS не может быть отрицательным.")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_flag(
+    "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False
+)
+SECURE_HSTS_PRELOAD = _env_flag("DJANGO_SECURE_HSTS_PRELOAD", False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_PROXY_SSL_HEADER = (
+    ("HTTP_X_FORWARDED_PROTO", "https")
+    if not DEBUG and _env_flag("DJANGO_TRUST_X_FORWARDED_PROTO", False)
+    else None
+)
 
 
 # Application definition
 
+# Подключённые приложения, включая встроенные компоненты Django и приложение кинетики.
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,6 +126,8 @@ INSTALLED_APPS = [
     'kinetics.apps.KineticsConfig',
 ]
 
+# SessionMiddleware делает request.session доступной представлениям; CSRF-защита
+# проверяет POST-формы, в том числе форму загрузки файла.
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -50,8 +138,20 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# В production все страницы приложения требуют аутентификации. Для локальной
+# разработки с явным DEBUG=True сохраняется текущий удобный однопользовательский поток.
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+if not DEBUG:
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
+        'django.contrib.auth.middleware.LoginRequiredMiddleware',
+    )
+
 ROOT_URLCONF = 'config.urls'
 
+# Django ищет шаблоны внутри каталогов приложений благодаря APP_DIRS=True.
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -73,6 +173,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# Локальная база SQLite хранится в корне проекта в файле db.sqlite3.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -103,7 +204,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+# Эти параметры задают язык и часовой пояс для форматирования и дат Django.
+LANGUAGE_CODE = 'ru'
 
 TIME_ZONE = 'UTC'
 
@@ -115,14 +217,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+# Префикс URL для ссылок на статические ресурсы: изображения, CSS и JavaScript.
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

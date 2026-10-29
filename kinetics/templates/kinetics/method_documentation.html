@@ -1,0 +1,118 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}Метод расчёта — Apollinex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .method-workspace { width: 100%; max-width: 1250px; margin: 0 auto; padding: 32px 30px; }
+    .method-card { margin-bottom: 16px; padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); box-shadow: var(--shadow); }
+    .method-card h1, .method-card h2, .method-card h3 { margin-top: 0; color: #182b49; }
+    .method-card h1 { margin-bottom: 8px; font-size: 28px; }
+    .method-card h2 { margin-bottom: 12px; font-size: 19px; }
+    .method-card h3 { margin: 18px 0 8px; font-size: 15px; }
+    .method-lead, .method-note { color: var(--muted); }
+    .method-warning { padding: 13px 15px; border: 1px solid #f0dfad; border-radius: 9px; background: #fff9e8; color: #795b0b; }
+    .method-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
+    .method-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .method-table th, .method-table td { padding: 10px 12px; border-bottom: 1px solid #edf1f7; text-align: left; vertical-align: top; }
+    .method-table th { background: #eaf1fb; color: #243a59; }
+    .method-equation { overflow-x: auto; padding: 12px 14px; border-radius: 8px; background: #f4f8fd; color: #19375d; font-family: Consolas, "Courier New", monospace; white-space: nowrap; }
+    .method-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .method-button { display: inline-flex; min-height: 38px; align-items: center; padding: 0 13px; border: 1px solid var(--line); border-radius: 8px; color: #1e63bc; font-weight: 650; text-decoration: none; }
+    .method-button:hover { background: #f4f8fd; }
+    @media (max-width: 660px) { .method-workspace { padding: 22px 14px; } .method-card { padding: 16px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="method-workspace">
+    <section class="method-card">
+        <h1>Метод расчёта и границы подтверждения</h1>
+        <p class="method-lead">Описаны формулы, которые используются при расчёте из повторных измерений, и преобразования, найденные в исходнике C#. Импортированные значения C# и подгонки Django отображаются отдельно.</p>
+        <div class="method-warning"><strong>EE требует осторожного ввода.</strong> В XAML поле подписано «Entrapment efficiency (EE), %», комментарий Excel описывает EE как отношение, а формула C# умножает введённое значение напрямую и не делит его на 100. Поэтому 0,8 и 80 отличаются в расчёте ровно в 100 раз. Apollinex сохраняет и использует число как введено; исходный код не позволяет подтвердить, какую шкалу авторы ожидали от пользователя.</div>
+        <div class="method-actions">
+            <a class="method-button" href="{% url 'raw_experiment_new' %}?example=synthetic">Открыть синтетический пример A</a>
+            <a class="method-button" href="{% url 'raw_experiment_new' %}?example=synthetic-b">Открыть вариант B для сравнения</a>
+        </div>
+    </section>
+
+    <section class="method-card">
+        <h2>Входные величины и единицы</h2>
+        <div class="method-table-wrap">
+            <table class="method-table">
+                <thead><tr><th>Величина</th><th>Обозначение в C#</th><th>Единицы и смысл</th></tr></thead>
+                <tbody>
+                    <tr><td>Масса образца</td><td>SampleMass</td><td>г; в формуле переводится в мг множителем 1000.</td></tr>
+                    <tr><td>Drug loading</td><td>DrugLoading (DL)</td><td>Отношение DM/MM по пояснению Excel, без процентного преобразования.</td></tr>
+                    <tr><td>Entrapment efficiency</td><td>EntrapmentEfficiency (EE)</td><td>Умножитель формулы; физическая шкала ввода не подтверждена из-за подписи «%» в UI и отсутствия деления на 100 в коде.</td></tr>
+                    <tr><td>Объём реактора / пробы</td><td>ReactorVolume / ProbeVolume</td><td>мл.</td></tr>
+                    <tr><td>Сигнал и калибровка</td><td>A, CalibrationCoefficient (k)</td><td>A — условные единицы прибора; комментарий C# задаёт Cabs = k × A, а сохраняемый Cabs обозначен как мг/мл. Единица A зависит от прибора.</td></tr>
+                    <tr><td>Время</td><td>Time</td><td>Минуты в подписи книги C# и в ручной форме. Для простой таблицы Time/Release приложение не угадывает единицы файла.</td></tr>
+                    <tr><td>Release</td><td>DrugRelease</td><td>Проценты по подписи C#; расчетное число не ограничивается диапазоном 0–100.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="method-card">
+        <h2>Порядок расчёта одной точки повтора</h2>
+        <p>Источник: <code>TryDataForViewModel.cs</code>. Каждый промежуточный результат хранится в C# как <code>float</code>; Django округляет шаги формулы к IEEE-754 float32, чтобы воспроизводить этот порядок для конечных значений.</p>
+        <div class="method-equation">ChlMass_mg = (SampleMass_g / (1 + DL)) × DL × 1000 × EE</div>
+        <div class="method-equation">Cabs_i_mg_per_ml = A_i × k</div>
+        <div class="method-equation">Mreal_i_mg = Cabs_i × Vreactor_ml + (Σ Cabs_j, j &lt; i) × Vprobe_ml</div>
+        <div class="method-equation">Release_i_percent = (Mreal_i_mg / ChlMass_mg) × 100</div>
+        <p>Сумма Cabs обнуляется в начале каждого повтора и содержит только предыдущие точки этого же повтора. Так в Mreal добавляется масса препарата, вынесенная ранее отобранными пробами. В Excel-разборщике исходной книги C# время 0 служит маркером конца блока после его данных; ручной ввод сохраняет все строки, включая нулевое время.</p>
+        <p>Если числитель и ChlMass одновременно равны нулю, C# записывает Release = 0. При нулевом ChlMass и ненулевом Mreal C#-формула делит на ноль; Django вместо сохранения бесконечности выдаёт ошибку расчёта.</p>
+    </section>
+
+    <section class="method-card">
+        <h2>Повторы, среднее и SD</h2>
+        <p>Источник: <code>SampleAllDataForViewModel.SetDrugRelease()</code> и <code>DrugReleaseForViewModel</code>. Результаты повторов объединяются по номеру точки, а время агрегированной строки берётся из первого повтора. Код C# не сравнивает время точек между повторами; он предполагает одинаковое количество точек. Django проверяет число точек, сохраняет исходный порядок и также использует время первого повтора.</p>
+        <div class="method-equation">Q̄_i = float32(Average(Release_i,1 … Release_i,n))</div>
+        <div class="method-equation">SD_i = sqrt(Σ (Release_i,r − Q̄_i)² / n)</div>
+        <p>Это популяционное стандартное отклонение с делением на n, не SEM и не выборочное SD с делением на n−1. В вычислении C# среднее — float, а отклонения суммируются в double. Для готовых таблиц SD остаётся отсутствующим, если исходный файл его не содержал.</p>
+    </section>
+
+    <section class="method-card">
+        <h2>TTP и QTP</h2>
+        <div class="method-equation">P = Q_last − SD_last / 2; найти первую строку исходного порядка, где Q_i &gt; P</div>
+        <p>Возвращаются TTP = Time_i и QTP = Q_i без интерполяции. Сравнение строгое: равенство порогу не считается пересечением. Для пустых данных или отсутствующего/некорректного SD Django показывает причину и не подменяет SD нулём. В C# используется цикл без проверки границ, поэтому пустой ряд или отсутствие пересечения может привести к исключению.</p>
+    </section>
+
+    <section class="method-card">
+        <h2>Преобразованные координаты моделей C#</h2>
+        <p>Источник: <code>SampleAllDataForViewModel.AddAllDrugRelease()</code>. C# создаёт координаты и графики; в проверенном исходнике не найдены правила регрессии и расчёт коэффициентов, R² или RMSE для этих преобразованных серий.</p>
+        <div class="method-table-wrap">
+            <table class="method-table">
+                <thead><tr><th>Модель</th><th>X</th><th>Y</th><th>Правило C# и допустимая область</th></tr></thead>
+                <tbody>
+                    <tr><td>Zero Order</td><td>Time</td><td>Release</td><td>Исходная агрегированная серия Time/Release; отдельное преобразование тождественных координат не создаётся.</td></tr>
+                    <tr><td>First Order</td><td>Time</td><td>ln(100 − Release)</td><td>C# добавляет все строки. Release ≥ 100 даёт неконечную/неопределённую координату; Django сохраняет строку со статусом исключения.</td></tr>
+                    <tr><td>Higuchi</td><td>√Time</td><td>Release</td><td>Добавляются все строки; отрицательное время не имеет вещественного корня.</td></tr>
+                    <tr><td>Hixson–Crowell</td><td>Time</td><td>∛100 − ∛(100 − Release)</td><td>C# пропускает Time = 0. Release &gt; 100 выходит из вещественной области преобразования.</td></tr>
+                    <tr><td>Korsmeyer–Peppas</td><td>ln(Time)</td><td>ln(Release)</td><td>C# пропускает только Time = 0; для Time &lt; 0 или Release ≤ 0 логарифм не конечен. Django показывает такие строки как исключённые.</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p>Подгонки в разделе «Модели» рассчитывает Django по отдельным эмпирическим уравнениям и показывает на исходной шкале Release. Они не являются восстановленными коэффициентами C# и не подтверждены как эквивалентные.</p>
+    </section>
+
+    <section class="method-card">
+        <h2>Поддерживаемые Excel-форматы</h2>
+        <p>Импортёр определяет формат по заголовкам простой таблицы или по расположению служебных данных книги. Распознанный тип сохраняется отдельно от имени файла и показывается в истории, сравнении, отчёте и экспорте. Для старых записей без метки показывается «Не определён (старая запись)».</p>
+        <ul>
+            <li><strong>Простая таблица:</strong> строка заголовков Time, Release и необязательный SD; значения идут ниже. Поддерживаются синонимы, включая Drug release, % и Standart deviation.</li>
+            <li><strong>Исходная книга C#:</strong> параметры и имя в O6:O11; число повторов читается из O5 вправо; блоки повторов начинаются с 4-й строки, исходные масса/время/A находятся в A/C/D, начало следующего блока вычисляется по длине предыдущего.</li>
+            <li><strong>AllData.xlsx:</strong> код <code>SaveInFile()</code> формирует книгу с листом на эксперимент, сохраняет исходные строки и Cabs/Mreal/Release в A:G, среднюю серию Zero Order и SD в I:K, координаты моделей — отдельными таблицами в I:J. Маркер Zero Order находится в I2.</li>
+        </ul>
+        <p>Эти структуры восстановлены по исходному коду. В рабочем каталоге не найдено настоящих книг; синтетические тестовые книги проверяют разбор формата, но не доказывают совместимость с неизвестными вариантами реальных файлов.</p>
+    </section>
+
+    <section class="method-card">
+        <h2>Что подтверждено и что нужно для численной сверки</h2>
+        <p>По исходным C# файлам подтверждены порядок формул, float-поля, объединение повторов по индексу, популяционное SD, строгий порог TTP/QTP и формулы координат. Синтетический пример проверен регрессионными тестами против ожидаемых значений Django, полученных из этих выражений.</p>
+        <p class="method-warning">Независимое сравнение с запущенной C# программой и реальными числами ещё не выполнено: C#-проект в доступной папке не содержит solution/project для сборки, а dotnet отсутствует. Для этого нужны исходная книга эксперимента <code>*.xlsx</code>, соответствующая ей книга <code>*AllData.xlsx</code> из того же расчёта, и документ/протокол, подтверждающий шкалу EE (0–1 или 0–100). Передайте именно согласованную пару книг, а не два разных опыта.</p>
+        <p>Проверенные файлы исходника: <code>ChemicalInfo/SampleModel/TryDataForViewModel.cs</code>, <code>ChemicalInfo/Data/SampleAllDataForViewModel.cs</code>, <code>ChemicalInfo/SampleModel/DrugReleaseModel/DrugReleaseForViewModel.cs</code>, <code>InfoApp/ViewModel/MethodsForCommonComands/WorkWithExcelFile.cs</code>, <code>WorkWithWordAndExcel/ConnectionWithExcel.cs</code> и <code>InfoApp/View/AddView/AddSample.xaml</code>.</p>
+    </section>
+</main>
+{% endblock %}

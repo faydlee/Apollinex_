@@ -1,0 +1,106 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}Кинетические модели — Apollinex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analysis-workspace { width: 100%; max-width: 1500px; min-width: 0; margin: 0 auto; padding: 32px 30px; }
+    .analysis-header { margin-bottom: 20px; }
+    .analysis-title { margin: 0; color: #10213b; font-size: clamp(25px, 2.7vw, 32px); font-weight: 750; letter-spacing: -1.2px; }
+    .analysis-subtitle { margin: 6px 0 0; color: var(--muted); }
+    .analysis-card { min-width: 0; margin-bottom: 18px; padding: 21px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); box-shadow: var(--shadow); }
+    .analysis-card h2 { margin: 0 0 14px; color: #182b49; font-size: 17px; }
+    .analysis-form { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+    .analysis-field { display: grid; flex: 1 1 300px; gap: 6px; color: var(--ink); font-weight: 650; }
+    .analysis-field select { min-height: 42px; padding: 8px 11px; border: 1px solid #cbd8e8; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+    .analysis-button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--blue); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+    .analysis-button:hover { background: var(--blue-dark); }
+    .analysis-note, .analysis-warning { padding: 13px 15px; border-radius: 9px; }
+    .analysis-note { border: 1px solid #d6e5f7; background: #f5f9ff; color: #405875; }
+    .analysis-warning { border: 1px solid #f0dfad; background: #fff9e8; color: #795b0b; }
+    .analysis-note p, .analysis-warning p { margin: 0 0 7px; }
+    .analysis-note p:last-child, .analysis-warning p:last-child { margin-bottom: 0; }
+    .analysis-formula { margin: 10px 0; color: #182b49; font-size: 19px; font-weight: 700; }
+    .analysis-result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 11px; margin: 16px 0; }
+    .analysis-result { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: #f8fafd; }
+    .analysis-result-label, .analysis-result-value { display: block; overflow-wrap: anywhere; }
+    .analysis-result-label { margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+    .analysis-result-value { color: var(--ink); font-weight: 700; }
+    .analysis-plot { display: block; width: 100%; height: auto; border: 1px solid #edf1f7; border-radius: 9px; }
+    .analysis-empty { padding: 22px; border: 1px dashed #d4dfed; border-radius: 9px; background: #f8fafd; color: var(--muted); text-align: center; }
+    @media (max-width: 660px) { .analysis-workspace { padding: 24px 14px; } .analysis-card { padding: 16px; } .analysis-button { width: 100%; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="analysis-workspace">
+    <header class="analysis-header">
+        <h1 class="analysis-title">Кинетические модели</h1>
+        <p class="analysis-subtitle">Сравните распространённые модели по R², рассчитанному на исходной шкале высвобождения.</p>
+    </header>
+
+    <section class="analysis-card" aria-labelledby="model-select-title">
+        <h2 id="model-select-title">Эксперимент для анализа</h2>
+        {% if experiments %}
+            <form class="analysis-form" method="get">
+                <label class="analysis-field" for="model-experiment">Сохранённый эксперимент
+                    <select id="model-experiment" name="experiment_id" required>
+                        <option value="">Выберите эксперимент</option>
+                        {% for item in experiments %}
+                            <option value="{{ item.pk }}"{% if selected_id == item.pk|stringformat:"s" %} selected{% endif %}>{{ item.name }} — {{ item.measurement_count }} точек</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            <button class="analysis-button" type="submit">Сравнить модели</button>
+            </form>
+        {% else %}
+            <p class="analysis-empty">Сохранённых экспериментов пока нет.</p>
+        {% endif %}
+        {% if model_error %}<p class="analysis-warning" role="status">{{ model_error }}</p>{% endif %}
+    </section>
+
+    <section class="analysis-card" aria-labelledby="model-description-title">
+        <h2 id="model-description-title">Метод сравнения</h2>
+        <div class="analysis-note">
+            <p>Реализованы Zero Order, First Order, Higuchi, Hixson–Crowell и Korsmeyer–Peppas. Все модели подгоняются к сохранённым значениям Time и Release; параметры и остатки проверяются на конечность.</p>
+            <p>Для каждой успешной подгонки R² вычисляется на исходной шкале Release. Параметры с нулевым свободным членом используют модели Zero Order и Higuchi; First Order и Hixson–Crowell оценивают выход к плато. Korsmeyer–Peppas подгоняется к исходному Release без нормирования на полное количество и использует все точки, поскольку в файле нет отметки начальной фазы.</p>
+            <p>Модели с разным числом параметров сравниваются только как описательные подгонки по R². Этот критерий не подтверждает физический механизм. Единицы Time и Release в исходном формате не заданы.</p>
+        </div>
+    </section>
+
+    {% if selected_experiment %}
+        <section class="analysis-card" aria-labelledby="model-result-title">
+            <h2 id="model-result-title">Сравнение моделей для «{{ selected_experiment.name }}»</h2>
+            <p class="analysis-subtitle"><a href="{% url 'experiment_detail' selected_experiment.pk %}">Вернуться к эксперименту</a> · <a href="{% url 'reports' %}?experiment_id={{ selected_experiment.pk }}">Открыть отчёт</a></p>
+            {% include "kinetics/model_comparison_table.html" %}
+            {% if model_plot %}<img class="analysis-plot" src="data:image/png;base64,{{ model_plot }}" alt="Измерения с SD и расчётные кривые кинетических моделей для {{ selected_experiment.name }}">{% elif model_plot_error %}<p class="analysis-warning" role="alert">{{ model_error }} Таблица расчётов доступна.</p>{% else %}<p class="analysis-empty">Нет успешно рассчитанных моделей для построения кривых.</p>{% endif %}
+        </section>
+
+        <section class="analysis-card" aria-labelledby="source-coordinate-title">
+            <h2 id="source-coordinate-title">Координаты преобразованных моделей</h2>
+            {% include "kinetics/source_coordinates.html" %}
+        </section>
+
+        <section class="analysis-card" aria-labelledby="first-order-result-title">
+            <h2 id="first-order-result-title">Показатели First Order для «{{ selected_experiment.name }}»</h2>
+            {% if model_fit %}
+                <div class="analysis-result-grid">
+                    <div class="analysis-result"><span class="analysis-result-label">Оценка плато R∞</span><span class="analysis-result-value">{{ model_fit_display.plateau }} (единица Release не указана)</span></div>
+                    <div class="analysis-result"><span class="analysis-result-label">Скорость k</span><span class="analysis-result-value">{{ model_fit_display.rate }} (единица Time)<sup>−1</sup></span></div>
+                    <div class="analysis-result"><span class="analysis-result-label">RMSE</span><span class="analysis-result-value">{{ model_fit_display.rmse }}</span></div>
+                    <div class="analysis-result"><span class="analysis-result-label">R²</span><span class="analysis-result-value">{% if model_fit.r_squared != None %}{{ model_fit_display.r_squared }}{% else %}не определяется для постоянных значений{% endif %}</span></div>
+                    <div class="analysis-result"><span class="analysis-result-label">Измерений в подгонке</span><span class="analysis-result-value">{{ model_fit.point_count }}</span></div>
+                </div>
+                <p class="analysis-subtitle">Оценка плато R∞ и скорость k подбираются методом наименьших квадратов по фактическому времени. RMSE и R² описывают соответствие этой модели выбранным данным.</p>
+            {% else %}
+                <p class="analysis-warning" role="status">{{ model_error }}</p>
+            {% endif %}
+        </section>
+
+        <section class="analysis-card" aria-labelledby="ttp-qtp-title">
+            <h2 id="ttp-qtp-title">TTP и QTP</h2>
+            {% include "kinetics/ttp_qtp_note.html" %}
+        </section>
+    {% endif %}
+</main>
+{% endblock %}

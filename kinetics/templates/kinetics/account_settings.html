@@ -1,0 +1,93 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}Настройки — Apollinex{% endblock %}
+
+{% block content %}
+<main class="settings-workspace">
+    <header class="settings-heading">
+        <h1>Настройки</h1>
+        <p>Управление учётной записью и безопасностью.</p>
+    </header>
+
+    <section class="auth-card settings-card" aria-labelledby="account-settings-title">
+        <h2 id="account-settings-title">Учётная запись</h2>
+        <dl class="settings-meta">
+            <div class="settings-meta-item">
+                <dt>Логин</dt>
+                <dd>{{ request.user.get_username }}</dd>
+            </div>
+            <div class="settings-meta-item">
+                <dt>Дата регистрации</dt>
+                <dd>{{ request.user.date_joined|date:"d.m.Y" }}</dd>
+            </div>
+            <div class="settings-meta-item">
+                <dt>Отображаемое имя</dt>
+                <dd>
+                    {% with display_name=request.user.get_full_name %}
+                        {{ display_name|default:request.user.get_username }}
+                    {% endwith %}
+                </dd>
+            </div>
+        </dl>
+
+        <form action="{% url 'settings' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="section" value="profile">
+            {% if profile_form.non_field_errors %}
+                <div class="settings-errors" role="alert">{{ profile_form.non_field_errors }}</div>
+            {% endif %}
+            <div class="settings-form-fields">
+                {% for field in profile_form %}
+                    <div class="settings-field">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                        {% if field.errors %}<div class="settings-errors" role="alert">{{ field.errors }}</div>{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <button class="auth-submit settings-save" type="submit">Сохранить изменения</button>
+        </form>
+    </section>
+
+    <section class="auth-card settings-card" aria-labelledby="security-settings-title">
+        <h2 id="security-settings-title">Безопасность</h2>
+        <form action="{% url 'settings' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="section" value="password">
+            {% if password_form.non_field_errors %}
+                <div class="settings-errors" role="alert">{{ password_form.non_field_errors }}</div>
+            {% endif %}
+            <div class="settings-form-fields">
+                {% for field in password_form %}
+                    <div class="settings-field">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                        {% if field.errors %}<div class="settings-errors" role="alert">{{ field.errors }}</div>{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <button class="auth-submit settings-save" type="submit">Изменить пароль</button>
+        </form>
+    </section>
+
+    <section class="auth-card settings-card" aria-labelledby="app-information-title">
+        <h2 id="app-information-title">Информация</h2>
+        <dl class="settings-facts">
+            <div class="settings-fact">
+                <dt>Приложение</dt>
+                <dd>Apollinex</dd>
+            </div>
+            <div class="settings-fact">
+                <dt>Описание</dt>
+                <dd>Моделирование кинетики высвобождения действующих веществ</dd>
+            </div>
+            <div class="settings-fact">
+                <dt>Версия</dt>
+                <dd>v1.0</dd>
+            </div>
+        </dl>
+    </section>
+</main>
+{% endblock %}

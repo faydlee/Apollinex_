@@ -1,0 +1,188 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}{{ experiment.name }} — Apollinex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-workspace { width: 100%; max-width: 1600px; min-width: 0; margin: 0 auto; padding: 32px 30px; }
+    .detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+    .detail-title { margin: 0; color: #10213b; font-size: clamp(25px, 2.7vw, 32px); font-weight: 750; letter-spacing: -1.2px; line-height: 1.2; overflow-wrap: anywhere; }
+    .detail-subtitle { margin: 6px 0 0; color: var(--muted); overflow-wrap: anywhere; }
+    .detail-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+    .detail-button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; padding: 0 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: #1e63bc; font: inherit; font-weight: 650; text-decoration: none; cursor: pointer; }
+    .detail-button:hover { background: #f4f8fd; }
+    .detail-button.danger { border-color: #e6bcbc; color: #a02f2f; }
+    .detail-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr); gap: 18px; align-items: start; }
+    .detail-card { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); box-shadow: var(--shadow); }
+    .detail-card h2 { margin: 0 0 16px; color: #182b49; font-size: 17px; }
+    .detail-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; margin-bottom: 18px; }
+    .detail-summary-item { min-width: 0; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: #f8fafd; }
+    .detail-summary-label, .detail-summary-value { display: block; overflow-wrap: anywhere; }
+    .detail-summary-label { margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+    .detail-summary-value { color: var(--ink); font-weight: 650; }
+    .detail-plot { display: block; width: 100%; height: auto; border: 1px solid #edf1f7; border-radius: 9px; }
+    .detail-empty-plot { display: grid; min-height: 190px; place-items: center; border: 1px dashed #d4dfed; border-radius: 9px; background: #f8fafd; color: var(--muted); text-align: center; }
+    .detail-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
+    .detail-table { width: 100%; min-width: 410px; border-collapse: collapse; font-size: 13px; }
+    .detail-table th, .detail-table td { padding: 10px 13px; border-bottom: 1px solid #edf1f7; text-align: left; }
+    .detail-table th { background: #eaf1fb; color: #243a59; font-weight: 700; }
+    .detail-table tbody tr:nth-child(even) { background: #f6f9fd; }
+    .detail-table tbody tr:last-child td { border-bottom: 0; }
+    .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; }
+    .page-link { color: #1e63bc; font-weight: 650; text-decoration: none; }
+    .page-link:hover { text-decoration: underline; }
+    .pagination span { color: var(--muted); }
+    .detail-table-empty { padding: 20px; color: var(--muted); text-align: center; }
+    @media (max-width: 1000px) { .detail-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 660px) {
+        .detail-workspace { padding: 24px 14px; }
+        .detail-header { flex-direction: column; }
+        .detail-card { padding: 16px; }
+        .detail-summary { grid-template-columns: 1fr; }
+        .pagination { font-size: 12px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="detail-workspace">
+    <header class="detail-header">
+        <div>
+            <h1 class="detail-title">{{ experiment.name }}</h1>
+            <p class="detail-subtitle">{{ experiment.source_file }} · {{ experiment.get_source_format_display }} · {{ experiment.get_input_mode_display }} · метод: {% if experiment.calculation_version %}{{ experiment.calculation_version }}{% elif experiment.input_mode == "raw" %}версия не сохранена{% else %}готовые значения из файла{% endif %}</p>
+        </div>
+        <div class="detail-actions">
+            <a class="detail-button" href="{% url 'experiment_history' %}">К истории</a>
+            <a class="detail-button" href="{% url 'comparison' %}">К сравнению</a>
+            <a class="detail-button" href="{% url 'data' %}?experiment_id={{ experiment.pk }}">Таблица</a>
+            <a class="detail-button" href="{% url 'kinetic_models' %}?experiment_id={{ experiment.pk }}">Модели</a>
+            <a class="detail-button" href="{% url 'reports' %}?experiment_id={{ experiment.pk }}">Отчёт</a>
+            <a class="detail-button" href="{% url 'experiment_export_xlsx' experiment.pk %}">Скачать Excel</a>
+            {% if experiment.input_mode == "raw" and can_edit_experiment %}<a class="detail-button" href="{% url 'experiment_edit' experiment.pk %}">Изменить исходные данные</a>{% endif %}
+            {% if request.user.is_authenticated and experiment.owner_id == request.user.pk %}
+                <form action="{% url 'experiment_delete' experiment.pk %}" method="post" onsubmit="return confirm('Удалить эту работу и только её связанные измерения? Восстановить удалённые данные будет нельзя.');">
+                    {% csrf_token %}
+                    <button class="detail-button danger" type="submit">Удалить</button>
+                </form>
+            {% endif %}
+        </div>
+    </header>
+
+    {% if experiment.source_format == "synthetic-raw" %}<p class="detail-subtitle" role="status"><strong>Синтетический учебный пример.</strong> Эти данные созданы для демонстрации и не являются реальными научными результатами.</p>{% endif %}
+
+    {% if experiment.input_mode == "raw" %}
+        <section class="detail-card" aria-labelledby="raw-input-title" style="margin-bottom: 18px">
+            <h2 id="raw-input-title">Исходные параметры и повторные измерения</h2>
+            {% if experiment.source_results_stale %}<p class="detail-subtitle" role="status">Параметры изменены после импорта. Значения C# AllData ниже сохранены как исходный снимок и не соответствуют текущему пересчёту Django.</p>{% endif %}
+            <div class="detail-summary">
+                <div class="detail-summary-item"><span class="detail-summary-label">Drug loading (DL), безразмерное отношение</span><span class="detail-summary-value">{{ experiment.drug_loading|default_if_none:"— не сохранено —" }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">EE, прямой множитель формулы C# (шкала не подтверждена)</span><span class="detail-summary-value">{{ experiment.entrapment_efficiency|default_if_none:"— не сохранено —" }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Объём реактора, мл</span><span class="detail-summary-value">{{ experiment.reactor_volume_ml|default_if_none:"— не сохранено —" }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Объём пробы, мл</span><span class="detail-summary-value">{{ experiment.probe_volume_ml|default_if_none:"— не сохранено —" }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Коэффициент калибровки k</span><span class="detail-summary-value">{{ experiment.calibration_coefficient|default_if_none:"— не сохранено —" }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Версия расчёта</span><span class="detail-summary-value">{{ experiment.calculation_version|default:"Не рассчитан" }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Количество повторов</span><span class="detail-summary-value">{{ raw_replicates|length }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Исходных измерений</span><span class="detail-summary-value">{{ raw_measurement_count }}</span></div>
+            </div>
+            {% if can_edit_experiment %}
+                <form action="{% url 'experiment_recalculate' experiment.pk %}" method="post" style="margin: 0 0 16px">
+                    {% csrf_token %}
+                    <button class="detail-button" type="submit">Пересчитать из сохранённых исходных данных</button>
+                </form>
+            {% endif %}
+            {% if raw_measurements_page.object_list %}
+                <div class="detail-table-wrap">
+                    <table class="detail-table">
+                        <thead><tr><th scope="col">Повтор</th><th scope="col">Масса, г</th><th scope="col">Время, мин</th><th scope="col">Сигнал A</th><th scope="col">Django Cabs</th><th scope="col">Django Mreal</th><th scope="col">Django Release</th><th scope="col">C# AllData Cabs</th><th scope="col">C# AllData Mreal</th><th scope="col">C# AllData Release</th></tr></thead>
+                        <tbody>
+                            {% for row in raw_measurements_page %}
+                                <tr>
+                                    <td>{{ row.replicate.replicate_number }}</td><td>{{ row.replicate.sample_mass_g }}</td><td>{{ row.time }}</td><td>{{ row.signal_a }}</td>
+                                    {% if row.calculation %}<td>{{ row.calculation.c_abs }}</td><td>{{ row.calculation.m_real }}</td><td>{{ row.calculation.release }}</td>{% else %}<td>—</td><td>—</td><td>—</td>{% endif %}
+                                    {% if row.source_calculation %}<td>{{ row.source_calculation.c_abs|default_if_none:"—" }}</td><td>{{ row.source_calculation.m_real|default_if_none:"—" }}</td><td>{{ row.source_calculation.release|default_if_none:"—" }}</td>{% else %}<td>—</td><td>—</td><td>—</td>{% endif %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if raw_measurements_page.has_other_pages %}
+                    <nav class="pagination" aria-label="Страницы исходных измерений">
+                        {% if raw_measurements_page.has_previous %}<a class="page-link" href="?raw_page={{ raw_measurements_page.previous_page_number }}">Назад</a>{% else %}<span aria-disabled="true">Назад</span>{% endif %}
+                        <span>Страница {{ raw_measurements_page.number }} из {{ raw_measurements_page.paginator.num_pages }}</span>
+                        {% if raw_measurements_page.has_next %}<a class="page-link" href="?raw_page={{ raw_measurements_page.next_page_number }}">Далее</a>{% else %}<span aria-disabled="true">Далее</span>{% endif %}
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="detail-table-empty">Исходных измерений пока нет.</div>
+            {% endif %}
+        </section>
+    {% else %}
+        <section class="detail-card" aria-labelledby="legacy-input-title" style="margin-bottom: 18px">
+            <h2 id="legacy-input-title">Исходные параметры</h2>
+            <p class="detail-subtitle">У этой записи сохранены готовые значения Time/Release/SD. Источник не содержит повторов, массы образца и параметров DL, EE, объёмов или калибровки; эти значения недоступны и не восстанавливались.</p>
+        </section>
+    {% endif %}
+
+    <div class="detail-grid">
+        <section class="detail-card" aria-labelledby="detail-data-title">
+            <h2 id="detail-data-title">Измерения эксперимента</h2>
+            <div class="detail-summary">
+                <div class="detail-summary-item"><span class="detail-summary-label">Создан</span><span class="detail-summary-value">{{ experiment.created_at|date:"d.m.Y H:i" }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Последнее обновление</span><span class="detail-summary-value">{{ experiment.updated_at|date:"d.m.Y H:i" }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Количество точек</span><span class="detail-summary-value">{{ row_count }}</span></div>
+                <div class="detail-summary-item"><span class="detail-summary-label">Диапазон времени</span><span class="detail-summary-value">{% if row_count %}{{ time_min }} — {{ time_max }}{% else %}—{% endif %}</span></div>
+            </div>
+            {% if measurements_page.object_list %}
+                <div class="detail-table-wrap">
+                    <table class="detail-table">
+                        <thead><tr><th scope="col">№</th><th scope="col">Время</th><th scope="col">Высвобождение</th><th scope="col">SD</th></tr></thead>
+                        <tbody>
+                            {% for row in measurements_page %}
+                                <tr><td>{{ row.order|add:1 }}</td><td>{{ row.time }}</td><td>{{ row.release }}</td><td>{{ row.sd|default_if_none:"—" }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if measurements_page.has_other_pages %}
+                    <nav class="pagination" aria-label="Страницы измерений">
+                        {% if measurements_page.has_previous %}<a class="page-link" href="?page={{ measurements_page.previous_page_number }}">Назад</a>{% else %}<span aria-disabled="true">Назад</span>{% endif %}
+                        <span>Страница {{ measurements_page.number }} из {{ measurements_page.paginator.num_pages }}</span>
+                        {% if measurements_page.has_next %}<a class="page-link" href="?page={{ measurements_page.next_page_number }}">Далее</a>{% else %}<span aria-disabled="true">Далее</span>{% endif %}
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="detail-table-empty">У этого эксперимента пока нет измерений.</div>
+            {% endif %}
+        </section>
+
+        <section class="detail-card" aria-labelledby="detail-chart-title">
+            <h2 id="detail-chart-title">График кинетики</h2>
+            {% if plot %}
+                <img class="detail-plot" src="data:image/png;base64,{{ plot }}" alt="График измерений эксперимента {{ experiment.name }}">
+            {% elif plot_error %}
+                <div class="detail-empty-plot" role="alert">Не удалось построить график по сохранённым измерениям. Данные доступны в таблице.</div>
+            {% elif plot_data_error %}
+                <div class="detail-empty-plot" role="alert">Нет корректных числовых измерений для построения графика.</div>
+            {% else %}
+                <div class="detail-empty-plot">График появится после сохранения корректных измерений.</div>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="detail-card" aria-labelledby="detail-model-title" style="margin-top: 18px">
+        <h2 id="detail-model-title">Сравнение кинетических моделей</h2>
+        {% include "kinetics/model_comparison_table.html" %}
+        {% if model_plot %}<img class="kinetic-plot" src="data:image/png;base64,{{ model_plot }}" alt="Экспериментальные данные с SD и расчётные кривые моделей для {{ experiment.name }}">{% elif model_plot_error %}<p class="kinetic-unavailable" role="alert">Не удалось построить график моделей; таблица расчётов доступна.</p>{% else %}<p class="kinetic-unavailable">Недостаточно данных для расчётных кривых моделей.</p>{% endif %}
+    </section>
+
+    <section class="detail-card" aria-labelledby="detail-source-coordinate-title" style="margin-top: 18px">
+        <h2 id="detail-source-coordinate-title">Преобразованные координаты моделей</h2>
+        {% include "kinetics/source_coordinates.html" %}
+    </section>
+
+    <section class="detail-card" aria-labelledby="detail-ttp-qtp-title" style="margin-top: 18px">
+        <h2 id="detail-ttp-qtp-title">TTP и QTP</h2>
+        {% include "kinetics/ttp_qtp_note.html" %}
+    </section>
+</main>
+{% endblock %}

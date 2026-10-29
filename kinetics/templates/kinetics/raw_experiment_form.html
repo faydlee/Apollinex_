@@ -1,0 +1,108 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}{% if is_edit %}Редактировать расчёт{% else %}Новый расчёт{% endif %} — Apollinex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .raw-workspace { width: 100%; max-width: 1180px; margin: 0 auto; padding: 32px 30px; }
+    .raw-card { padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); box-shadow: var(--shadow); }
+    .raw-title { margin: 0; color: #10213b; font-size: 28px; letter-spacing: -.7px; }
+    .raw-lead { max-width: 820px; margin: 8px 0 22px; color: var(--muted); }
+    .raw-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .raw-field { min-width: 0; }
+    .raw-field label { display: block; margin-bottom: 6px; color: #263955; font-weight: 650; }
+    .raw-field input, .raw-field textarea { width: 100%; padding: 10px 12px; border: 1px solid #ced9e8; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+    .raw-field textarea { resize: vertical; }
+    .raw-field input:focus, .raw-field textarea:focus { outline: 3px solid #d7eaff; border-color: #5d9ae4; }
+    .raw-help { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .raw-synthetic-reference { margin: 0 0 22px; padding: 16px; border: 1px solid #efd38b; border-radius: 10px; background: #fff9e8; }
+    .raw-synthetic-reference h2 { margin: 0 0 8px; color: #604a14; font-size: 16px; }
+    .raw-synthetic-reference p { margin: 8px 0; color: #604f25; font-size: 13px; }
+    .raw-table-wrap { overflow-x: auto; border: 1px solid #e8d9aa; border-radius: 8px; background: white; }
+    .raw-expected-table { width: 100%; border-collapse: collapse; }
+    .raw-expected-table th, .raw-expected-table td { padding: 8px 10px; border-bottom: 1px solid #f0e7ce; text-align: left; }
+    .raw-expected-table th { background: #fff4d5; color: #604f25; }
+    .raw-error { margin: 5px 0 0; color: #a02f2f; font-size: 13px; }
+    .raw-wide { grid-column: 1 / -1; }
+    .raw-actions { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+    .raw-submit { min-height: 42px; padding: 9px 18px; border: 0; border-radius: 8px; background: #2169c4; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    .raw-back { color: #1e63bc; font-weight: 650; text-decoration: none; }
+    .raw-back:hover { text-decoration: underline; }
+    .raw-submit-status { color: var(--muted); font-size: 12px; }
+    @media (max-width: 700px) { .raw-workspace { padding: 22px 14px; } .raw-grid { grid-template-columns: 1fr; } .raw-wide { grid-column: auto; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="raw-workspace">
+    <section class="raw-card">
+        <h1 class="raw-title">{% if is_edit %}Редактировать исходные данные{% elif is_synthetic_example %}{{ synthetic_example.label }}{% else %}Новый расчёт из исходных данных{% endif %}</h1>
+        {% if is_edit %}
+            {% if source_results_locked %}
+                <p class="raw-lead">Измените название, описание или параметры расчёта. После сохранения Release и SD будут рассчитаны заново из исходных измерений.</p>
+                <p class="raw-help" role="note">Исходные строки связаны с отдельными результатами C# AllData и заблокированы для сохранения соответствия. Результаты C# останутся исходным снимком и будут помечены в отчёте.</p>
+            {% else %}
+                <p class="raw-lead">Измените параметры, повторы или исходные сигналы. При сохранении расчёт Release и SD будет построен заново из исходных измерений.</p>
+            {% endif %}
+        {% else %}
+            {% if is_synthetic_example %}
+                <p class="raw-lead">Все исходные числа ниже синтетические и предназначены для обучения. Они не являются реальными научными измерениями. Сохраните вариант A и вариант B отдельно, чтобы проверить сравнение.</p>
+            {% else %}
+                <p class="raw-lead">Введите параметры опыта и вставьте измерения из таблицы Excel. Исходные сигналы сохраняются отдельно; рассчитанные значения Release и SD можно пересчитать из сохранённых данных.</p>
+            {% endif %}
+        {% endif %}
+
+        {% if synthetic_example %}
+            <section class="raw-synthetic-reference" aria-labelledby="synthetic-reference-title">
+                <h2 id="synthetic-reference-title">Ожидаемый результат исходного примера</h2>
+                <p>DL = 0,25; EE = 0,8 как прямой множитель C#; масса каждого повтора = 0,25 г; V реактора = 100 мл; V пробы = 2 мл; k = 0,5. В таблице ниже вычисления Django с округлением float32 в шагах формулы. Это проверочный пример, а не независимый запуск C# или реальные данные. После изменения полей ожидаемые значения изменятся.</p>
+                <div class="raw-table-wrap">
+                    <table class="raw-expected-table">
+                        <thead><tr><th>Время, мин</th><th>Средний Release, %</th><th>SD, %</th></tr></thead>
+                        <tbody>{% for point in synthetic_example.expected %}<tr><td>{{ point.time }}</td><td>{{ point.release|floatformat:4 }}</td><td>{{ point.sd|floatformat:4 }}</td></tr>{% endfor %}</tbody>
+                    </table>
+                </div>
+                <p class="raw-help">TTP = {{ synthetic_example.ttp }} мин; QTP = {{ synthetic_example.qtp|floatformat:4 }}%; порог Q<sub>last</sub> − SD<sub>last</sub>/2 = {{ synthetic_example.ttp_threshold|floatformat:4 }}%. Сравнить можно с <a href="{% url 'raw_experiment_new' %}?example={% if synthetic_example_key == 'synthetic' %}synthetic-b{% else %}synthetic{% endif %}">{% if synthetic_example_key == 'synthetic' %}вариантом B{% else %}вариантом A{% endif %}</a>.</p>
+            </section>
+        {% endif %}
+
+        <form method="post"{% if is_edit %} action="{% url 'experiment_edit' experiment.pk %}" onsubmit="return confirm('{% if source_results_locked %}Сохранить параметры и пересчитать результаты Django? Импортированный снимок C# останется прежним и будет отмечен как устаревший.{% else %}Сохранить изменения и заменить текущие результаты Django пересчётом из исходных измерений?{% endif %}');"{% elif is_synthetic_example %} action="?example={{ synthetic_example_key }}"{% endif %}>
+            {% csrf_token %}
+            <div class="raw-grid">
+                {% for field in form %}
+                    <div class="raw-field{% if field.name == 'raw_rows' or field.name == 'description' %} raw-wide{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<p class="raw-help">{{ field.help_text }}</p>{% endif %}
+                        {% for error in field.errors %}<p class="raw-error" role="alert">{{ error }}</p>{% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            {% if form.non_field_errors %}<div class="raw-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="raw-actions">
+                <button class="raw-submit" type="submit" data-loading-label="Сохраняем и пересчитываем…">{% if is_edit %}Сохранить изменения и пересчитать{% elif is_synthetic_example %}Сохранить синтетический опыт и рассчитать{% else %}Сохранить и рассчитать{% endif %}</button>
+                <span class="raw-submit-status" role="status" aria-live="polite"></span>
+                {% if is_edit %}<a class="raw-back" href="{% url 'experiment_detail' experiment.pk %}">Отмена</a>{% else %}<a class="raw-back" href="{% url 'home' %}">Вернуться к обзору</a>{% endif %}
+            </div>
+        </form>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const rawForm = document.querySelector(".raw-card form");
+    if (rawForm) {
+        rawForm.addEventListener("submit", () => {
+            if (!rawForm.checkValidity()) return;
+            const button = rawForm.querySelector("button[type='submit']");
+            const status = rawForm.querySelector(".raw-submit-status");
+            if (!button) return;
+            button.disabled = true;
+            button.setAttribute("aria-busy", "true");
+            button.textContent = button.dataset.loadingLabel || "Сохраняем…";
+            if (status) status.textContent = "Проверяем исходные строки и рассчитываем Release и SD.";
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}{% if experiment %}Отчёт: {{ experiment.name }}{% else %}Отчёты{% endif %} — Apollinex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-workspace { width: 100%; max-width: 1500px; min-width: 0; margin: 0 auto; padding: 32px 30px; }
+    .report-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    .report-title { margin: 0; color: #10213b; font-size: clamp(25px, 2.7vw, 32px); font-weight: 750; letter-spacing: -1.2px; }
+    .report-subtitle { margin: 6px 0 0; color: var(--muted); overflow-wrap: anywhere; }
+    .report-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+    .report-button { min-height: 40px; padding: 0 15px; border: 1px solid #cbd8e8; border-radius: 8px; background: white; color: #1e63bc; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+    .report-button.primary { border-color: var(--blue); background: var(--blue); color: white; }
+    .report-button:hover { filter: brightness(.96); }
+    .report-card { min-width: 0; margin-bottom: 18px; padding: 21px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); box-shadow: var(--shadow); }
+    .report-card h2 { margin: 0 0 14px; color: #182b49; font-size: 17px; }
+    .report-form { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+    .report-field { display: grid; flex: 1 1 300px; gap: 6px; color: var(--ink); font-weight: 650; }
+    .report-field select { min-height: 42px; padding: 8px 11px; border: 1px solid #cbd8e8; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+    .report-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 11px; }
+    .report-summary-item { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: #f8fafd; }
+    .report-summary-label, .report-summary-value { display: block; overflow-wrap: anywhere; }
+    .report-summary-label { margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+    .report-summary-value { color: var(--ink); font-weight: 700; }
+    .report-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
+    .report-table { width: 100%; min-width: 450px; border-collapse: collapse; font-size: 13px; }
+    .report-table th, .report-table td { padding: 9px 12px; border-bottom: 1px solid #edf1f7; text-align: left; }
+    .report-table th { background: #eaf1fb; color: #243a59; font-weight: 700; }
+    .report-table tbody tr:nth-child(even) { background: #f6f9fd; }
+    .report-table tbody tr:last-child td { border-bottom: 0; }
+    .report-plot { display: block; width: 100%; height: auto; border: 1px solid #edf1f7; border-radius: 9px; }
+    .report-empty { padding: 22px; border: 1px dashed #d4dfed; border-radius: 9px; background: #f8fafd; color: var(--muted); text-align: center; }
+    .report-warning { margin: 14px 0 0; padding: 13px 15px; border: 1px solid #f0dfad; border-radius: 9px; background: #fff9e8; color: #795b0b; }
+    @media (max-width: 660px) { .report-workspace { padding: 24px 14px; } .report-header { flex-direction: column; } .report-card { padding: 16px; } .report-actions { width: 100%; } .report-button { flex: 1; text-align: center; } }
+    @media print {
+        @page { margin: 14mm; }
+        body { min-width: 0; background: white; color: #111; font-size: 10pt; }
+        .app-shell { display: block; min-height: 0; }
+        .sidebar, .global-messages, .report-selector, .report-actions { display: none !important; }
+        .report-workspace { max-width: none; padding: 0; }
+        .report-card { margin-bottom: 10mm; padding: 0; border: 0; box-shadow: none; }
+        .report-card h2 { break-after: avoid; }
+        .report-table-wrap { overflow: visible; border-color: #aaa; }
+        .report-table { min-width: 0; font-size: 9pt; }
+        .report-table th, .report-table td { padding: 5px 7px; }
+        .report-plot { border: 0; }
+        .report-table tr { break-inside: avoid; }
+        .source-coordinate-form, .source-coordinate-pagination { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="report-workspace">
+    <header class="report-header">
+        <div>
+            <h1 class="report-title">{% if experiment %}Отчёт по эксперименту{% else %}Отчёты{% endif %}</h1>
+            {% if experiment %}<p class="report-subtitle">{{ experiment.name }} · создан {{ experiment.created_at|date:"d.m.Y H:i" }}</p>{% else %}<p class="report-subtitle">Сформируйте печатную страницу по сохранённому эксперименту.</p>{% endif %}
+        </div>
+        {% if experiment %}<div class="report-actions"><button class="report-button primary" type="button" onclick="window.print()">Печать / сохранить PDF</button><a class="report-button" href="{% url 'reports' %}">Выбрать другой</a></div>{% endif %}
+    </header>
+
+    <section class="report-card report-selector" aria-labelledby="report-select-title">
+        <h2 id="report-select-title">Эксперимент для отчёта</h2>
+        {% if experiments %}
+            <form class="report-form" method="get">
+                <label class="report-field" for="report-experiment">Сохранённый эксперимент
+                    <select id="report-experiment" name="experiment_id" required>
+                        <option value="">Выберите эксперимент</option>
+                        {% for item in experiments %}<option value="{{ item.pk }}"{% if selected_id == item.pk|stringformat:"s" %} selected{% endif %}>{{ item.name }} — {{ item.created_at|date:"d.m.Y H:i" }}, {{ item.measurement_count }} точек</option>{% endfor %}
+                    </select>
+                </label>
+                <button class="report-button primary" type="submit">Сформировать отчёт</button>
+            </form>
+        {% else %}
+            <div class="report-empty">Сохранённых экспериментов пока нет.</div>
+        {% endif %}
+        {% if report_error %}<p class="report-warning" role="alert">{{ report_error }}</p>{% endif %}
+    </section>
+
+    {% if experiment %}
+        <section class="report-card" aria-labelledby="report-summary-title">
+            <h2 id="report-summary-title">Сводка</h2>
+            <p><a class="report-button primary" href="{% url 'experiment_export_xlsx' experiment.pk %}">Скачать воспроизводимый Excel-отчёт</a></p>
+            <p><a href="{% url 'experiment_detail' experiment.pk %}">Вернуться к эксперименту</a> · <a href="{% url 'comparison' %}">Открыть сравнение</a></p>
+            {% if experiment.source_format == "synthetic-raw" %}<p class="report-warning" role="status"><strong>Синтетический учебный пример.</strong> Эти данные созданы для демонстрации и не являются реальными научными результатами.</p>{% endif %}
+            <div class="report-summary">
+                <div class="report-summary-item"><span class="report-summary-label">Название эксперимента</span><span class="report-summary-value">{{ experiment.name }}</span></div>
+                <div class="report-summary-item"><span class="report-summary-label">Дата создания</span><span class="report-summary-value">{{ experiment.created_at|date:"d.m.Y H:i" }}</span></div>
+                <div class="report-summary-item"><span class="report-summary-label">Исходный файл</span><span class="report-summary-value">{{ experiment.source_file }}</span></div>
+                <div class="report-summary-item"><span class="report-summary-label">Формат источника</span><span class="report-summary-value">{{ experiment.get_source_format_display }}</span></div>
+                <div class="report-summary-item"><span class="report-summary-label">Тип входных данных</span><span class="report-summary-value">{{ experiment.get_input_mode_display }}</span></div>
+                <div class="report-summary-item"><span class="report-summary-label">Метод расчёта</span><span class="report-summary-value">{% if experiment.calculation_version %}{{ experiment.calculation_version }}{% elif experiment.input_mode == "raw" %}версия не сохранена{% else %}готовые значения из файла{% endif %}</span></div>
+                <div class="report-summary-item"><span class="report-summary-label">Измерений</span><span class="report-summary-value">{{ report_summary.measurement_count }}</span></div>
+                <div class="report-summary-item"><span class="report-summary-label">Диапазон времени</span><span class="report-summary-value">{% if report_summary.measurement_count %}{{ report_summary.time_min }} — {{ report_summary.time_max }}{% else %}нет данных{% endif %}</span></div>
+                <div class="report-summary-item"><span class="report-summary-label">Диапазон высвобождения</span><span class="report-summary-value">{% if report_summary.measurement_count %}{{ report_summary.release_min }} — {{ report_summary.release_max }}{% else %}нет данных{% endif %}</span></div>
+            </div>
+            <p class="report-subtitle">Сводка содержит только количество измерений и фактические минимумы и максимумы сохранённых значений. Единицы в исходном файле не указаны.</p>
+            {% if experiment.source_results_stale %}<p class="report-warning" role="status">Исходные параметры изменены после импорта. Результаты C# AllData сохранены как снимок исходной книги; значения Django рассчитаны по текущим данным.</p>{% endif %}
+        </section>
+
+        <section class="report-card" aria-labelledby="report-plot-title">
+            <h2 id="report-plot-title">График измерений</h2>
+            {% if report_plot %}<img class="report-plot" src="data:image/png;base64,{{ report_plot }}" alt="График измерений эксперимента {{ experiment.name }}">{% elif report_plot_error %}<div class="report-empty" role="alert">Не удалось построить график по сохранённым измерениям.</div>{% else %}<div class="report-empty">Для графика пока нет корректных измерений.</div>{% endif %}
+        </section>
+
+        <section class="report-card" aria-labelledby="report-model-title">
+            <h2 id="report-model-title">Сравнение кинетических моделей</h2>
+            {% with model_fits=report_model_fits best_model=report_best_model source_model_transforms=report_source_model_transforms source_transform_experiment_id=report_source_transform_experiment_id %}
+                {% include "kinetics/model_comparison_table.html" %}
+            {% endwith %}
+            {% if report_model_plot %}<img class="kinetic-plot" src="data:image/png;base64,{{ report_model_plot }}" alt="Экспериментальные данные с SD и кривые моделей для {{ experiment.name }}">{% elif report_model_plot_error %}<p class="report-warning" role="alert">Не удалось построить график моделей; таблица доступна.</p>{% else %}<p class="report-empty">Недостаточно данных для расчётных кривых моделей.</p>{% endif %}
+        </section>
+
+        <section class="report-card" aria-labelledby="report-source-coordinate-title">
+            <h2 id="report-source-coordinate-title">Преобразованные координаты</h2>
+            {% include "kinetics/source_coordinates.html" %}
+        </section>
+
+        {% if experiment.input_mode == "raw" %}
+            <section class="report-card" aria-labelledby="report-raw-title">
+                <h2 id="report-raw-title">Исходные параметры и значения расчёта</h2>
+                <p class="report-subtitle">Версия расчёта: {{ experiment.calculation_version|default:"не сохранена" }}. Cabs = A × k; Mreal = Cabs × Vреактора + сумма предыдущих Cabs × Vпробы; Release = 100 × Mreal / масса препарата. EE используется как прямой множитель: в интерфейсе C# подпись указывает %, но код не делит введённое значение на 100. Значения 0,8 и 80 дают множители, отличающиеся в 100 раз.</p>
+                <div class="report-table-wrap">
+                    <table class="report-table">
+                        <thead><tr><th scope="col">DL</th><th scope="col">EE, прямой множитель формулы</th><th scope="col">V реактора, мл</th><th scope="col">V пробы, мл</th><th scope="col">Калибровка k</th><th scope="col">Повторов</th></tr></thead>
+                        <tbody><tr><td>{{ experiment.drug_loading|default_if_none:"— не сохранено —" }}</td><td>{{ experiment.entrapment_efficiency|default_if_none:"— не сохранено —" }}</td><td>{{ experiment.reactor_volume_ml|default_if_none:"— не сохранено —" }}</td><td>{{ experiment.probe_volume_ml|default_if_none:"— не сохранено —" }}</td><td>{{ experiment.calibration_coefficient|default_if_none:"— не сохранено —" }}</td><td>{{ report_raw_replicates|length }}</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="report-table-wrap" style="margin-top: 12px">
+                    <table class="report-table">
+                        <thead><tr><th scope="col">Повтор</th><th scope="col">Масса, г</th><th scope="col">Время, мин</th><th scope="col">Сигнал A</th><th scope="col">Django Cabs</th><th scope="col">Django Mreal</th><th scope="col">Django Release</th><th scope="col">C# AllData Cabs</th><th scope="col">C# AllData Mreal</th><th scope="col">C# AllData Release</th></tr></thead>
+                        <tbody>
+                            {% for row in report_raw_measurements %}
+                                <tr><td>{{ row.replicate.replicate_number }}</td><td>{{ row.replicate.sample_mass_g }}</td><td>{{ row.time }}</td><td>{{ row.signal_a }}</td><td>{{ row.calculation.c_abs|default_if_none:"—" }}</td><td>{{ row.calculation.m_real|default_if_none:"—" }}</td><td>{{ row.calculation.release|default_if_none:"—" }}</td>{% if row.source_calculation %}<td>{{ row.source_calculation.c_abs|default_if_none:"—" }}</td><td>{{ row.source_calculation.m_real|default_if_none:"—" }}</td><td>{{ row.source_calculation.release|default_if_none:"—" }}</td>{% else %}<td>—</td><td>—</td><td>—</td>{% endif %}</tr>
+                            {% empty %}<tr><td colspan="10">Исходные измерения не найдены.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        {% else %}
+            <section class="report-card" aria-labelledby="report-parameters-unavailable-title">
+                <h2 id="report-parameters-unavailable-title">Исходные параметры</h2>
+                <p class="report-subtitle">Этот эксперимент импортирован как готовая таблица Time/Release/SD. В исходном файле не было повторов, массы образца и параметров DL, EE, объёмов или калибровки; эти значения недоступны и не восстанавливались.</p>
+            </section>
+        {% endif %}
+
+        <section class="report-card" aria-labelledby="report-ttp-qtp-title">
+            <h2 id="report-ttp-qtp-title">TTP и QTP</h2>
+            {% include "kinetics/ttp_qtp_note.html" %}
+        </section>
+
+        <section class="report-card" aria-labelledby="report-measurements-title">
+            <h2 id="report-measurements-title">Таблица измерений</h2>
+            {% if report_measurements %}
+                <div class="report-table-wrap">
+                    <table class="report-table">
+                        <thead><tr><th scope="col">№</th><th scope="col">Время</th><th scope="col">Высвобождение</th><th scope="col">SD</th></tr></thead>
+                        <tbody>{% for row in report_measurements %}<tr><td>{{ row.order|add:1 }}</td><td>{{ row.time }}</td><td>{{ row.release }}</td><td>{{ row.sd|default_if_none:"—" }}</td></tr>{% endfor %}</tbody>
+                    </table>
+                </div>
+            {% else %}<div class="report-empty">У этого эксперимента нет измерений.</div>{% endif %}
+        </section>
+    {% endif %}
+</main>
+{% endblock %}

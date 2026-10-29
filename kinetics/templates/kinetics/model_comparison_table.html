@@ -1,0 +1,56 @@
+{% if best_model %}
+    <p class="kinetic-metric">
+        Лучшая модель по R² среди проверенных: <strong>{{ best_model.name }}</strong>
+        (R² = {{ best_model.r_squared_display }}).
+    </p>
+{% else %}
+    <p class="kinetic-unavailable">Ни одна модель пока не получила сопоставимое значение R².</p>
+{% endif %}
+
+<div class="kinetic-results-wrap">
+    <table class="kinetic-results">
+        <thead>
+            <tr><th scope="col">Модель</th><th scope="col">Параметры</th><th scope="col">R² на исходной шкале</th><th scope="col">RMSE</th><th scope="col">Точки</th></tr>
+        </thead>
+        <tbody>
+            {% for model in model_fits %}
+                <tr{% if model.best %} class="best-model"{% endif %}>
+                    <td>
+                        <strong>{{ model.name }}</strong>
+                        {% if model.best %}<span class="kinetic-best-badge">Лучшая по R²</span>{% endif %}
+                        <span class="kinetic-model-formula">{{ model.formula }}</span>
+                        {% if model.success %}<span class="kinetic-model-note">{{ model.note }} Параметров: {{ model.parameter_count }}. Использовано допустимых точек: {{ model.point_count }} из {{ model.input_point_count }}.{% if model.excluded_input_count %} Исключены неконечные Time/Release в строках {% for index in model.excluded_input_indices %}{% if not forloop.first %}, {% endif %}{{ index }}{% endfor %}{% if model.excluded_input_more_count %} и ещё {{ model.excluded_input_more_count }}{% endif %} (всего {{ model.excluded_input_count }}).{% endif %}</span>{% else %}<span class="kinetic-model-note kinetic-model-error">{{ model.error }}{% if model.excluded_input_count %} Исключены неконечные Time/Release в строках {% for index in model.excluded_input_indices %}{% if not forloop.first %}, {% endif %}{{ index }}{% endfor %}{% if model.excluded_input_more_count %} и ещё {{ model.excluded_input_more_count }}{% endif %} (всего {{ model.excluded_input_count }}).{% endif %}</span>{% endif %}
+                    </td>
+                    <td class="kinetic-model-parameters">
+                        {% if model.success %}
+                            {% for parameter in model.parameters_display %}{% if not forloop.first %}; {% endif %}{{ parameter.name }} = {{ parameter.value }}{% endfor %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{% if model.success %}{% if model.r_squared_display %}{{ model.r_squared_display }}{% else %}не определяется для постоянного отклика{% endif %}{% else %}—{% endif %}</td>
+                    <td>{% if model.rmse_display %}{{ model.rmse_display }}{% else %}—{% endif %}</td>
+                    <td>{% if model.success %}{{ model.point_count }}{% else %}—{% endif %}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="kinetic-model-note">R² вычисляется по остаткам на исходной шкале Release. SD показано на графике, но подгонка моделей не взвешивается по SD. Единицы Time и Release в файле не заданы. Эти подгонки Django используют собственные эмпирические уравнения и не воспроизводят преобразованные координаты моделей в C# версии; численно сравнивать результаты двух программ без согласованной методики нельзя. Модели с разным числом параметров сравниваются здесь только по R², и наибольший R² сам по себе не подтверждает физический механизм высвобождения.</p>
+
+{% if source_model_transforms %}
+    <h3 class="kinetic-model-title">Преобразованные координаты моделей</h3>
+    <p class="kinetic-model-note">Координаты моделей по исходному C# коду показывают преобразования, для которых в исходнике найдены формулы, но не найдены правила линейной регрессии и метрики. Таблица ниже показывает число точек, попавших в допустимую область, а CSV содержит каждую точку и её преобразованные координаты. Значения выше — отдельные эмпирические подгонки Django с R² на исходной шкале.</p>
+    <div class="kinetic-results-wrap">
+        <table class="kinetic-results">
+            <thead><tr><th scope="col">Модель</th><th scope="col">X</th><th scope="col">Y</th><th scope="col">Входных точек</th><th scope="col">Преобразовано</th><th scope="col">Пропуск t = 0</th><th scope="col">Недопустимая область</th><th scope="col">Данные</th></tr></thead>
+            <tbody>
+                {% for transform in source_model_transforms %}
+                    <tr>
+                        <td>{{ transform.name }}</td><td>{{ transform.x_formula }}</td><td>{{ transform.y_formula }}</td>
+                        <td>{{ transform.input_count }}</td><td>{{ transform.included_count }}</td><td>{{ transform.source_omission_count }}</td><td>{{ transform.invalid_domain_count }}</td>
+                        <td><a href="{% url 'source_transform_csv' source_transform_experiment_id transform.key %}">Скачать CSV</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}

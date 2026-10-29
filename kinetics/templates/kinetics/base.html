@@ -63,6 +63,39 @@
             min-width: 0;
         }
 
+        .global-messages {
+            grid-column: 2;
+            min-width: 0;
+            padding: 18px 30px 0;
+        }
+
+        .site-message {
+            margin: 0 0 10px;
+            padding: 11px 14px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: var(--white);
+            color: var(--ink);
+        }
+
+        .site-message.success {
+            border-color: #b7e2cb;
+            background: #effaf4;
+            color: #126a40;
+        }
+
+        .site-message.error {
+            border-color: #f0c4c4;
+            background: #fff3f3;
+            color: #9d2d2d;
+        }
+
+        .site-message.warning {
+            border-color: #f0dfad;
+            background: #fff9e8;
+            color: #795b0b;
+        }
+
         .sidebar {
             position: fixed;
             top: 0;
@@ -166,10 +199,102 @@
             color: var(--white);
         }
 
-        .nav-item.is-inactive {
-            color: #97a8be;
-            cursor: default;
+        .account-name {
+            overflow: hidden;
+            color: #fff;
+            font-weight: 650;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
+
+        .account-action {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .account-nav {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: -12px 4px 20px;
+        }
+
+        .account-nav form { margin: 0; }
+        .account-nav .nav-item { min-height: 34px; padding: 0 9px; font-size: 12px; }
+        .account-nav .account-name { width: 100%; padding-left: 9px; }
+
+        .auth-workspace {
+            grid-column: 2;
+            width: min(560px, calc(100% - 48px));
+            margin: 48px auto;
+        }
+
+        .auth-card {
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--white);
+            box-shadow: var(--shadow);
+        }
+
+        .auth-card h1 { margin: 0 0 8px; color: #10213b; font-size: 27px; }
+        .auth-card p { color: var(--muted); }
+        .auth-card label { display: inline-block; margin: 4px 0; color: var(--ink); font-weight: 650; }
+        .auth-card input { width: 100%; max-width: 440px; padding: 10px 12px; border: 1px solid #ced9e8; border-radius: 8px; background: #fff; color: var(--ink); }
+        .auth-card small { display: block; max-width: 440px; margin-top: 5px; color: var(--muted); }
+        .auth-card .errorlist { color: #9d2d2d; }
+        .auth-card .site-message { margin: 8px 0; }
+        .auth-submit { min-height: 38px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--blue); color: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+        .auth-card a { color: var(--blue-dark); font-weight: 650; }
+
+        .settings-workspace {
+            grid-column: 2;
+            display: grid;
+            gap: 18px;
+            width: min(900px, calc(100% - 48px));
+            margin: 38px auto 52px;
+        }
+
+        .settings-heading { margin: 0 0 2px; }
+        .settings-heading h1 { margin: 0; color: #10213b; font-size: 28px; }
+        .settings-heading p { margin: 6px 0 0; color: var(--muted); }
+        .settings-card { margin: 0; }
+        .settings-card h2 { margin: 0 0 14px; color: #10213b; font-size: 19px; }
+        .settings-meta,
+        .settings-facts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin: 0 0 16px;
+        }
+        .settings-meta-item,
+        .settings-fact {
+            min-width: 0;
+            padding: 11px 13px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: #f8fafd;
+        }
+        .settings-meta-item dt,
+        .settings-fact dt { color: var(--muted); font-size: 12px; }
+        .settings-meta-item dd,
+        .settings-fact dd { margin: 3px 0 0; color: var(--ink); font-weight: 650; overflow-wrap: anywhere; }
+        .settings-form-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 8px 16px;
+        }
+        .settings-field { min-width: 0; margin: 0 0 8px; }
+        .settings-field label { display: inline-block; margin: 4px 0; color: var(--ink); font-weight: 650; }
+        .settings-field input { width: 100%; max-width: 460px; padding: 10px 12px; border: 1px solid #ced9e8; border-radius: 8px; background: #fff; color: var(--ink); }
+        .settings-field small { display: block; max-width: 620px; margin-top: 5px; color: var(--muted); }
+        .settings-errors { margin: 5px 0 0; color: #9d2d2d; }
+        .settings-errors ul { margin: 0; padding-left: 19px; }
+        .settings-save { margin-top: 5px; }
 
         .nav-icon {
             width: 18px;
@@ -194,12 +319,33 @@
         }
 
         .sidebar-art {
+            position: relative;
             width: 100%;
             max-width: 204px;
-            height: auto;
+            aspect-ratio: 260 / 250;
             margin: 12px auto 0;
             filter: drop-shadow(0 8px 16px rgb(1 10 23 / 24%));
             opacity: 0.94;
+        }
+
+        .sidebar-art-decoration,
+        .sidebar-art-mascot {
+            position: absolute;
+            display: block;
+            object-fit: fill;
+        }
+
+        .sidebar-art-decoration {
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar-art-mascot {
+            top: 11.2%;
+            left: 23.08%;
+            width: 53.85%;
+            height: 68.4%;
         }
 
         @media (max-width: 1120px) {
@@ -224,6 +370,16 @@
 
             .app-shell > main {
                 grid-column: 1;
+            }
+
+            .auth-workspace { grid-column: 1; width: calc(100% - 28px); margin: 24px auto; }
+            .auth-card { padding: 18px; }
+            .settings-workspace { grid-column: 1; width: calc(100% - 28px); margin: 24px auto; gap: 14px; }
+            .settings-card { padding: 18px; }
+
+            .global-messages {
+                grid-column: 1;
+                padding: 14px 16px 0;
             }
 
             .sidebar {
@@ -256,10 +412,11 @@
             }
 
             .nav-label,
-            .sidebar-bottom,
             .sidebar-art {
                 display: none;
             }
+
+            .sidebar-bottom .nav-divider { display: none; }
 
             .nav-list {
                 display: flex;
@@ -291,6 +448,40 @@
                 flex-basis: 16px;
             }
         }
+
+        .kinetic-results { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .kinetic-results-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
+        .kinetic-results th, .kinetic-results td { padding: 10px 12px; border-bottom: 1px solid #edf1f7; text-align: left; vertical-align: top; }
+        .kinetic-results th { background: #eaf1fb; color: #243a59; font-weight: 700; white-space: nowrap; }
+        .kinetic-results tbody tr:last-child td { border-bottom: 0; }
+        .kinetic-results tbody tr:nth-child(even) { background: #f8fafd; }
+        .kinetic-results .best-model { background: #eef8f2; }
+        .kinetic-best-badge { display: inline-block; margin-left: 7px; padding: 3px 7px; border-radius: 999px; background: #d9efe2; color: #246343; font-size: 11px; font-weight: 700; white-space: nowrap; }
+        .kinetic-model-title { margin: 16px 0 4px; color: #182b49; font-size: 15px; }
+        .kinetic-model-formula, .kinetic-model-note { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+        .kinetic-model-parameters { white-space: normal; overflow-wrap: anywhere; }
+        .kinetic-model-error { color: #815b12; }
+        .source-coordinate-form { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+        .source-coordinate-field { display: grid; flex: 1 1 300px; gap: 6px; color: var(--ink); font-weight: 650; }
+        .source-coordinate-field select { min-height: 42px; padding: 8px 11px; border: 1px solid #cbd8e8; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+        .source-coordinate-button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--blue); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+        .source-coordinate-note { margin: 10px 0 14px; padding: 13px 15px; border: 1px solid #d6e5f7; border-radius: 9px; background: #f5f9ff; color: #405875; }
+        .source-coordinate-empty { padding: 22px; border: 1px dashed #d4dfed; border-radius: 9px; background: #f8fafd; color: var(--muted); text-align: center; }
+        .source-coordinate-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; }
+        .source-coordinate-pagination a { color: #1e63bc; font-weight: 650; text-decoration: none; }
+        .kinetic-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 16px 0; }
+        .kinetic-metric { min-width: 0; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: #f8fafd; }
+        .kinetic-metric-label, .kinetic-metric-value { display: block; overflow-wrap: anywhere; }
+        .kinetic-metric-label { margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+        .kinetic-metric-value { color: var(--ink); font-weight: 700; }
+        .kinetic-unavailable { padding: 13px 15px; border: 1px solid #f0dfad; border-radius: 9px; background: #fff9e8; color: #795b0b; }
+        .kinetic-plot { display: block; width: 100%; height: auto; border: 1px solid #edf1f7; border-radius: 9px; }
+        @media print {
+            .kinetic-results-wrap { overflow: visible; }
+            .kinetic-results { font-size: 8pt; table-layout: fixed; }
+            .kinetic-results th, .kinetic-results td { padding: 4px 5px; overflow-wrap: anywhere; }
+            .kinetic-plot { border: 0; }
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -298,9 +489,20 @@
     <title>{% block title %}Apollinex{% endblock %}</title>
 </head>
 <body>
+    {% comment %}
+    Общая оболочка страниц: боковая навигация и содержимое конкретной страницы.
+    Дочерние шаблоны подставляют разметку в блок content.
+    {% endcomment %}
     {% block layout %}
         <div class="app-shell">
             {% include "kinetics/sidebar.html" %}
+            {% if messages %}
+                <div class="global-messages" aria-live="polite">
+                    {% for message in messages %}
+                        <div class="site-message {{ message.tags }}" role="{% if message.tags == 'error' %}alert{% else %}status{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
             {% block content %}{% endblock %}
         </div>
     {% endblock %}

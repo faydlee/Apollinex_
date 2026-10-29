@@ -1,0 +1,66 @@
+<form class="source-coordinate-form" method="get" action="{{ source_coordinate_action }}">
+    {% if source_coordinate_include_experiment_id %}<input type="hidden" name="experiment_id" value="{{ source_coordinate_experiment_id }}">{% endif %}
+    <label class="source-coordinate-field" for="source-model-key">Модель преобразования
+        <select id="source-model-key" name="source_model_key">
+            {% for definition in source_model_definitions %}
+                <option value="{{ definition.key }}"{% if selected_source_model.key == definition.key %} selected{% endif %}>
+                    {{ definition.name }}{% if definition.key in imported_model_keys %} — координаты из AllData{% endif %}
+                </option>
+            {% endfor %}
+        </select>
+    </label>
+    <button class="source-coordinate-button" type="submit">Показать координаты</button>
+</form>
+
+<p class="source-coordinate-note">
+    {% if experiment.source_results_stale and source_coordinate_source == "imported" %}<strong>Внимание:</strong> исходные параметры были изменены после импорта; координаты C# ниже сохранены как снимок книги и не пересчитывались для текущих параметров Django. {% endif %}
+    {% if source_coordinate_source == "imported" %}
+        Показаны координаты модели «{{ selected_source_model.name }}», сохранённые из книги C# AllData. Строки и порядок сохранены при импорте; Django их не пересчитывал.
+    {% else %}
+        Показано преобразование «{{ selected_source_model.name }}» по подтверждённым правилам C# для сохранённых точек Time/Release. Это координаты преобразования, без линейной подгонки C#.
+    {% endif %}
+    Формулы: X = {{ selected_source_model.x_formula }}, Y = {{ selected_source_model.y_formula }}. Для текущей таблицы: {{ source_coordinate_count }} строк.
+    По сохранённым Time/Release: {{ source_transform_counts.included_count }} использованы, {{ source_transform_counts.source_omission_count }} исключены правилом t = 0, {{ source_transform_counts.invalid_domain_count }} исключены из-за области определения. Эти количества относятся к повторному преобразованию сохранённых значений, а таблица AllData ниже остаётся исходной.
+    {% if source_coordinate_source == "imported" %}<a href="{% url 'imported_model_points_csv' source_coordinate_experiment_id selected_source_model.key %}">Скачать исходные координаты CSV</a>{% else %}<a href="{% url 'source_transform_csv' source_coordinate_experiment_id selected_source_model.key %}">Скачать преобразованные координаты CSV</a>{% endif %}
+</p>
+
+{% if source_coordinate_page.object_list %}
+    <div class="kinetic-results-wrap">
+        <table class="kinetic-results">
+            {% if source_coordinate_source == "imported" %}
+                <thead><tr><th scope="col">Точка</th><th scope="col">X</th><th scope="col">Y</th><th scope="col">SD</th><th scope="col">Статус</th></tr></thead>
+            {% else %}
+                <thead><tr><th scope="col">Точка</th><th scope="col">Исходное Time</th><th scope="col">Исходный Release</th><th scope="col">X</th><th scope="col">Y</th><th scope="col">Статус</th></tr></thead>
+            {% endif %}
+            <tbody>
+                {% for point in source_coordinate_page %}
+                    <tr>
+                        <td>{{ point.order|add:1 }}</td>
+                        {% if source_coordinate_source == "imported" %}
+                            <td>{{ point.x|default_if_none:"—" }}</td><td>{{ point.y|default_if_none:"—" }}</td><td>{{ point.sd|default_if_none:"—" }}</td>
+                        {% else %}
+                            <td>{{ point.time|default_if_none:"—" }}</td><td>{{ point.release|default_if_none:"—" }}</td><td>{{ point.x|default_if_none:"—" }}</td><td>{{ point.y|default_if_none:"—" }}</td>
+                        {% endif %}
+                        <td>
+                            {% if point.status == "included" %}Использована
+                            {% elif point.status == "skipped_t0_source_rule" %}Исключена: правило C# для t = 0
+                            {% elif point.status == "invalid_domain" %}Исключена: область определения
+                            {% elif point.status == "invalid_input" %}Исключена: некорректный ввод
+                            {% elif point.status == "empty_table" %}Таблица AllData пуста
+                            {% else %}Некорректная строка в книге{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if source_coordinate_page.has_other_pages %}
+        <nav class="source-coordinate-pagination" aria-label="Страницы координат модели">
+            {% if source_coordinate_page.has_previous %}<a class="page-link" href="{{ source_coordinate_page_base }}&amp;source_page={{ source_coordinate_page.previous_page_number }}">Назад</a>{% else %}<span aria-disabled="true">Назад</span>{% endif %}
+            <span>Страница {{ source_coordinate_page.number }} из {{ source_coordinate_page.paginator.num_pages }}</span>
+            {% if source_coordinate_page.has_next %}<a class="page-link" href="{{ source_coordinate_page_base }}&amp;source_page={{ source_coordinate_page.next_page_number }}">Далее</a>{% else %}<span aria-disabled="true">Далее</span>{% endif %}
+        </nav>
+    {% endif %}
+{% else %}
+    <p class="source-coordinate-empty">Для выбранной модели нет сохранённых координат или точек.</p>
+{% endif %}

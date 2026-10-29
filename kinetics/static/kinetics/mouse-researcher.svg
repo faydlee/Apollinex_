@@ -27,28 +27,6 @@
   </g>
   <circle cx="228" cy="151" r="1.8" fill="#65C6F4"/>
   <circle cx="232" cy="143" r="1.2" fill="#65C6F4"/>
-  <path d="M49 142c-27 10-40 30-26 43 10 9 28 0 34-10" stroke="#B7C7DB" stroke-width="8" stroke-linecap="round"/>
-  <path d="M83 72c-18-6-27-21-21-38 5-15 22-18 34-6l12 20" fill="#D6DFEA" stroke="#C1CCDA" stroke-width="3"/>
-  <path d="M145 54c5-20 23-29 37-17 13 11 9 29-4 39" fill="#D6DFEA" stroke="#C1CCDA" stroke-width="3"/>
-  <path d="M77 49c6-8 16-9 23-3m53 2c5-8 14-11 21-6" stroke="#B695A0" stroke-width="2" stroke-linecap="round"/>
-  <path d="M70 88c0-31 19-54 49-54s50 23 50 57c0 29-20 48-50 48S70 119 70 88Z" fill="#EEF2F7" stroke="#D8E0EA" stroke-width="3"/>
-  <path d="M80 91c8-13 20-19 39-19s31 6 40 19c-7 19-21 29-40 29S87 110 80 91Z" fill="#FFF"/>
-  <path d="M101 86a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm37 0a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" fill="#172B49"/>
-  <circle cx="102" cy="80" r="1.2" fill="#FFF"/>
-  <circle cx="139" cy="80" r="1.2" fill="#FFF"/>
-  <path d="M117 96c3-4 8-4 11 0-1 4-3 6-6 6s-5-2-5-6Z" fill="#E78C9A"/>
-  <path d="M120 103v3m-3 0c-5 4-9 4-13 1m19-1c5 4 9 4 13 1" stroke="#A9B5C4" stroke-width="1.8" stroke-linecap="round"/>
-  <path d="m114 96-17-3m17 8-19 2m45-7 17-3m-17 8 19 2" stroke="#B8C3D0" stroke-width="1.4" stroke-linecap="round"/>
-  <path d="M77 131c10-11 25-17 43-17s33 6 43 17l19 61H58l19-61Z" fill="#FFF" stroke="#D9E2EC" stroke-width="3"/>
-  <path d="m105 119 15 21 15-21 10 73H95l10-73Z" fill="#E7F2FC"/>
-  <path d="m105 119 15 21 15-21m-15 21v52" stroke="#C0D7EF" stroke-width="2" stroke-linejoin="round"/>
-  <path d="m145 128 17 7-13 57h-16l12-64Z" fill="#3A7FD0"/>
-  <path d="M146 135c-5 8-10 12-19 13" stroke="#8BC9E8" stroke-width="4" stroke-linecap="round"/>
-  <path d="M151 157h13l-3 17h-14l4-17Z" fill="#F8FBFF" stroke="#B8CCE2" stroke-width="1.5"/>
-  <path d="M153 88h20v31h-20z" fill="#C8EDFA" stroke="#77B8D6" stroke-width="3"/>
-  <path d="M153 98h20m-13 13 3-4 3 4" stroke="#77B8D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M163 88V72c0-5 3-8 7-8s7 3 7 8v9" stroke="#75B9D8" stroke-width="4" stroke-linecap="round"/>
-  <path d="M80 187h22m44 0h22" stroke="#6E849D" stroke-width="6" stroke-linecap="round"/>
   <path d="m191 43 3 6 7 2-6 4-2 7-4-6-6-2 6-4 2-7Zm-143 6 2 4 5 1-4 3-1 5-3-4-4-1 4-3 1-5Z" fill="#58A9F0"/>
   <path d="m201 76 2 4 4 1-4 3-1 4-2-4-4-1 4-3 1-4Z" fill="#8DCBF6"/>
 </svg>

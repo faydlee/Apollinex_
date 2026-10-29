@@ -1,0 +1,117 @@
+{% extends "kinetics/base.html" %}
+
+{% block title %}История экспериментов — Apollinex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .history-workspace {
+        width: 100%;
+        max-width: 1500px;
+        min-width: 0;
+        margin: 0 auto;
+        padding: 32px 30px;
+    }
+
+    .history-header { margin-bottom: 20px; }
+    .history-title { margin: 0; color: #10213b; font-size: clamp(25px, 2.7vw, 32px); font-weight: 750; letter-spacing: -1.2px; }
+    .history-subtitle { margin: 6px 0 0; color: var(--muted); }
+    .history-card { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); box-shadow: var(--shadow); }
+    .history-card h2 { margin: 0 0 16px; color: #182b49; font-size: 17px; }
+    .history-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
+    .history-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 13px; }
+    .history-table th, .history-table td { padding: 11px 13px; border-bottom: 1px solid #edf1f7; text-align: left; vertical-align: middle; }
+    .history-table th { background: #eaf1fb; color: #243a59; font-weight: 700; }
+    .history-table tbody tr:nth-child(even) { background: #f6f9fd; }
+    .history-table tbody tr:last-child td { border-bottom: 0; }
+    .history-name { color: var(--ink); font-weight: 700; }
+    .history-file { max-width: 290px; overflow-wrap: anywhere; color: var(--muted); }
+    .history-link, .page-link { color: #1e63bc; font-weight: 650; text-decoration: none; }
+    .history-link:hover, .page-link:hover { text-decoration: underline; }
+    .history-delete-form { display: inline; margin-left: 8px; }
+    .history-delete { padding: 5px 9px; border: 1px solid #e6b7b7; border-radius: 6px; background: #fff4f4; color: #9d2d2d; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+    .history-delete:hover { background: #ffe7e7; }
+    .history-empty { padding: 26px; border: 1px dashed #d4dfed; border-radius: 9px; background: #f8fafd; color: var(--muted); text-align: center; }
+    .history-empty a { color: #1e63bc; font-weight: 650; }
+    .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+    .pagination span { color: var(--muted); }
+    @media (max-width: 660px) {
+        .history-workspace { padding: 24px 14px; }
+        .history-card { padding: 16px; }
+        .pagination { font-size: 12px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="history-workspace">
+    <header class="history-header">
+        <h1 class="history-title">История экспериментов</h1>
+        <p class="history-subtitle">Все сохранённые эксперименты: исходные измерения, готовые таблицы и расчёты.</p>
+    </header>
+
+    <section class="history-card" aria-labelledby="history-table-title">
+        <h2 id="history-table-title">Сохранённые эксперименты</h2>
+        {% if experiments_page.object_list %}
+            <div class="history-table-wrap">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Название</th>
+                            <th scope="col">Исходный файл</th>
+                            <th scope="col">Формат</th>
+                            <th scope="col">Создан</th>
+                            <th scope="col">Обновлён</th>
+                            <th scope="col">Входные данные</th>
+                            <th scope="col">Измерения</th>
+                            <th scope="col">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for experiment in experiments_page %}
+                            <tr>
+                                <td class="history-name">{{ experiment.name }}</td>
+                                <td class="history-file">{{ experiment.source_file }}</td>
+                                <td>{{ experiment.get_source_format_display }}</td>
+                                <td>{{ experiment.created_at|date:"d.m.Y H:i" }}</td>
+                                <td>{{ experiment.updated_at|date:"d.m.Y H:i" }}</td>
+                                <td>{{ experiment.get_input_mode_display }}</td>
+                                <td>{{ experiment.measurement_count }}</td>
+                                <td>
+                                    <a class="history-link" href="{% url 'experiment_detail' experiment.pk %}">Эксперимент</a> ·
+                                    <a class="history-link" href="{% url 'kinetic_models' %}?experiment_id={{ experiment.pk }}">Модели</a> ·
+                                    <a class="history-link" href="{% url 'reports' %}?experiment_id={{ experiment.pk }}">Отчёт</a>
+                                    {% if request.user.is_authenticated and experiment.owner_id == request.user.pk %}
+                                        <form class="history-delete-form" action="{% url 'experiment_delete' experiment.pk %}" method="post" onsubmit="return confirm('Удалить эту работу и только её связанные измерения? Восстановить удалённые данные будет нельзя.');">
+                                            {% csrf_token %}
+                                            <button class="history-delete" type="submit">Удалить</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if experiments_page.has_other_pages %}
+                <nav class="pagination" aria-label="Страницы истории">
+                    {% if experiments_page.has_previous %}
+                        <a class="page-link" href="?page={{ experiments_page.previous_page_number }}">Назад</a>
+                    {% else %}
+                        <span aria-disabled="true">Назад</span>
+                    {% endif %}
+                    <span>Страница {{ experiments_page.number }} из {{ experiments_page.paginator.num_pages }}</span>
+                    {% if experiments_page.has_next %}
+                        <a class="page-link" href="?page={{ experiments_page.next_page_number }}">Далее</a>
+                    {% else %}
+                        <span aria-disabled="true">Далее</span>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="history-empty">
+                Экспериментов пока нет. <a href="{% url 'home' %}">Загрузите первый файл .xlsx</a>.
+            </div>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

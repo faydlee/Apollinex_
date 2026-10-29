@@ -4,6 +4,7 @@ __pycache__/
 
 # Virtyal environmet
 .venv/
+.venv-backup-*/
 venv/
 # Secrets
 .env
@@ -11,10 +12,13 @@ venv/
 
 #Django database and user files
 db.sqlite3
+db.sqlite3-*
 media/
+staticfiles/
 
 # IDE
 .vscode/
 
 # Logs
 *.log
+.pytest_cache/
