@@ -22,6 +22,7 @@ from .calculations import (
     ReplicateInput,
     calculate_dataset,
     calculate_replicate,
+    fit_linear_trendline,
     summarize_source_model_transforms,
     transform_source_model,
 )
@@ -932,6 +933,31 @@ class AllDataWorkbookImportTests(TestCase):
 
 
 class SourceModelTransformationTests(TestCase):
+    def test_linear_trendline_fits_free_intercept_and_counts_invalid_pairs(self):
+        fit = fit_linear_trendline([
+            (1, 5),
+            (2, 7),
+            (3, 9),
+            (None, 11),
+            (4, math.inf),
+        ])
+
+        self.assertTrue(fit["success"])
+        self.assertAlmostEqual(fit["slope"], 2.0)
+        self.assertAlmostEqual(fit["intercept"], 3.0)
+        self.assertAlmostEqual(fit["r_squared"], 1.0)
+        self.assertEqual(fit["point_count"], 3)
+        self.assertEqual(fit["excluded_count"], 2)
+
+    def test_linear_trendline_reports_constant_x_and_constant_y(self):
+        no_x_variation = fit_linear_trendline([(2, 1), (2, 4)])
+        self.assertFalse(no_x_variation["success"])
+        self.assertIn("все значения X одинаковы", no_x_variation["error"])
+
+        constant_y = fit_linear_trendline([(1, 7), (2, 7), (3, 7)])
+        self.assertTrue(constant_y["success"])
+        self.assertIsNone(constant_y["r_squared"])
+
     def test_csharp_coordinate_rules_and_boundary_handling(self):
         points = [(0, 0), (1, 20), (4, 100), (5, 120)]
 
@@ -992,13 +1018,61 @@ class SourceModelTransformationTests(TestCase):
         response = self.client.get("/models/", {"experiment_id": experiment.pk})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Координаты моделей по исходному C# коду")
+        self.assertContains(response, "Таблица показывает координаты моделей, найденные в C# исходнике")
         self.assertContains(response, "Эти подгонки Django используют собственные эмпирические уравнения")
         self.assertContains(response, f"/experiments/{experiment.pk}/transforms/zero_order.csv")
         self.assertContains(response, "Преобразованные координаты моделей")
         self.assertContains(response, "Исходное Time")
         self.assertEqual(response.context["source_coordinate_source"], "calculated")
         self.assertEqual(response.context["source_coordinate_count"], 3)
+        linear_fit = response.context["source_coordinate_linear_fit"]
+        self.assertTrue(linear_fit["success"])
+        self.assertAlmostEqual(linear_fit["slope"], 20.0)
+        self.assertAlmostEqual(linear_fit["intercept"], 0.0)
+        self.assertAlmostEqual(linear_fit["r_squared"], 1.0)
+        self.assertContains(response, "Линейная подгонка преобразованных координат")
+        self.assertIsNotNone(response.context["source_coordinate_linear_plot"])
+
+    def test_model_page_fits_imported_finite_pairs_and_reports_exclusions(self):
+        experiment = Experiment.objects.create(
+            name="Imported model points",
+            source_file="AllData.xlsx",
+        )
+        ImportedModelPoint.objects.create(
+            experiment=experiment,
+            model_key="zero_order",
+            order=0,
+            x=0,
+            y=5,
+            status="invalid",
+        )
+        ImportedModelPoint.objects.create(
+            experiment=experiment,
+            model_key="zero_order",
+            order=1,
+            x=1,
+            y=7,
+            status="included",
+        )
+        ImportedModelPoint.objects.create(
+            experiment=experiment,
+            model_key="zero_order",
+            order=2,
+            x=None,
+            y=None,
+            status="invalid",
+        )
+
+        response = self.client.get("/models/", {"experiment_id": experiment.pk})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["source_coordinate_source"], "imported")
+        fit = response.context["source_coordinate_linear_fit"]
+        self.assertTrue(fit["success"])
+        self.assertAlmostEqual(fit["slope"], 2.0)
+        self.assertAlmostEqual(fit["intercept"], 5.0)
+        self.assertEqual(fit["point_count"], 2)
+        self.assertEqual(fit["excluded_count"], 1)
 
 
 class RawInputsMigrationTests(TransactionTestCase):

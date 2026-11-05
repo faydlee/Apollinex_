@@ -38,6 +38,7 @@ from .calculations import (
     CALCULATION_VERSION,
     SOURCE_MODEL_DEFINITIONS,
     CalculationInputError,
+    fit_linear_trendline,
     recalculate_experiment,
     summarize_source_model_transforms,
     transform_source_model,
@@ -1191,6 +1192,56 @@ def _build_model_plot(points, fit):
         image_buffer.close()
 
 
+def _build_source_coordinate_plot(fit, definition):
+    """Plot finite transformed coordinates and their unweighted linear fit."""
+
+    if not fit["success"] or len(fit["points"]) < 2:
+        raise ValueError("Недостаточно координат для линейного графика.")
+    plotted_points = _sample_points(fit["points"])
+    min_x = min(x_value for x_value, _ in fit["points"])
+    max_x = max(x_value for x_value, _ in fit["points"])
+    line_y = [
+        fit["slope"] * x_value + fit["intercept"]
+        for x_value in (min_x, max_x)
+    ]
+    if not all(math.isfinite(value) for value in line_y):
+        raise ValueError("Линия подгонки выходит за числовой диапазон графика.")
+
+    figure, axis = plt.subplots(figsize=(9.0, 5.0))
+    image_buffer = io.BytesIO()
+    try:
+        axis.set_axisbelow(True)
+        axis.grid(True, which="major", color="#dce4ee", linewidth=0.8)
+        axis.scatter(
+            [point[0] for point in plotted_points],
+            [point[1] for point in plotted_points],
+            label="Преобразованные точки",
+            color="#1769aa",
+            edgecolors="white",
+            linewidths=0.7,
+            s=34,
+            zorder=3,
+        )
+        axis.plot(
+            [min_x, max_x],
+            line_y,
+            label="Линейная подгонка Django",
+            color="#d97732",
+            linewidth=2.0,
+            zorder=2,
+        )
+        axis.set_xlabel(f"X = {definition['x_formula']}")
+        axis.set_ylabel(f"Y = {definition['y_formula']}")
+        axis.set_title(f"{definition['name']}: преобразованные координаты")
+        axis.legend(frameon=False)
+        figure.tight_layout()
+        figure.savefig(image_buffer, format="png", dpi=140)
+        return base64.b64encode(image_buffer.getvalue()).decode("ascii")
+    finally:
+        plt.close(figure)
+        image_buffer.close()
+
+
 def _build_comparison_plot(datasets):
     figure, axis = plt.subplots(figsize=(9.4, 5.4))
     image_buffer = io.BytesIO()
@@ -1454,6 +1505,34 @@ def _source_coordinate_context(
         )["records"])
         coordinate_source = "calculated"
 
+    linear_fit = fit_linear_trendline(
+        (row.get("x"), row.get("y"))
+        for row in rows
+    )
+    linear_fit_display = None
+    linear_fit_plot = None
+    linear_fit_plot_error = False
+    if linear_fit["success"]:
+        linear_fit_display = {
+            "slope": _format_model_number(linear_fit["slope"]),
+            "intercept": _format_model_number(linear_fit["intercept"]),
+            "r_squared": (
+                _format_model_number(linear_fit["r_squared"])
+                if linear_fit["r_squared"] is not None else None
+            ),
+        }
+        try:
+            linear_fit_plot = _build_source_coordinate_plot(
+                linear_fit,
+                definition,
+            )
+        except Exception:
+            logger.exception(
+                "Не удалось построить линейный график координат модели %s",
+                definition["key"],
+            )
+            linear_fit_plot_error = True
+
     page = Paginator(rows, TABLE_PAGE_SIZE).get_page(page_number)
     page_query = {"source_model_key": definition["key"]}
     if include_experiment_id:
@@ -1463,6 +1542,10 @@ def _source_coordinate_context(
         "source_model_definitions": SOURCE_MODEL_DEFINITIONS,
         "source_coordinate_source": coordinate_source,
         "source_coordinate_count": len(rows),
+        "source_coordinate_linear_fit": linear_fit,
+        "source_coordinate_linear_fit_display": linear_fit_display,
+        "source_coordinate_linear_plot": linear_fit_plot,
+        "source_coordinate_linear_plot_error": linear_fit_plot_error,
         "source_transform_counts": transform_counts,
         "source_coordinate_page": page,
         "source_coordinate_experiment_id": experiment.pk,

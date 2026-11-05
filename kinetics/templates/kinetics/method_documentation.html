@@ -81,7 +81,7 @@
 
     <section class="method-card">
         <h2>Преобразованные координаты моделей C#</h2>
-        <p>Источник: <code>SampleAllDataForViewModel.AddAllDrugRelease()</code>. C# создаёт координаты и графики; в проверенном исходнике не найдены правила регрессии и расчёт коэффициентов, R² или RMSE для этих преобразованных серий.</p>
+        <p>Источник координат: <code>SampleAllDataForViewModel.AddAllDrugRelease()</code>. <code>ConnectionWithExcel.AddChartXY()</code> добавляет линейный Excel-трендлайн, включает отображение уравнения и R² и оставляет пересечение автоматически выбранным Excel. Excel-файлы с фактическими коэффициентами в исходнике не заданы.</p>
         <div class="method-table-wrap">
             <table class="method-table">
                 <thead><tr><th>Модель</th><th>X</th><th>Y</th><th>Правило C# и допустимая область</th></tr></thead>
@@ -94,7 +94,7 @@
                 </tbody>
             </table>
         </div>
-        <p>Подгонки в разделе «Модели» рассчитывает Django по отдельным эмпирическим уравнениям и показывает на исходной шкале Release. Они не являются восстановленными коэффициентами C# и не подтверждены как эквивалентные.</p>
+        <p>В разделе «Модели» Django также показывает отдельную линейную подгонку преобразованных координат с автоматическим свободным членом и R² в шкале Y. Это реконструкция поведения Excel для ревью точек, а численная эквивалентность конкретной версии Excel не подтверждена. Таблица эмпирических моделей выше рассчитывается отдельно на исходной шкале Release и не является этими коэффициентами.</p>
     </section>
 
     <section class="method-card">
@@ -111,7 +111,7 @@
     <section class="method-card">
         <h2>Что подтверждено и что нужно для численной сверки</h2>
         <p>По исходным C# файлам подтверждены порядок формул, float-поля, объединение повторов по индексу, популяционное SD, строгий порог TTP/QTP и формулы координат. Синтетический пример проверен регрессионными тестами против ожидаемых значений Django, полученных из этих выражений.</p>
-        <p class="method-warning">Независимое сравнение с запущенной C# программой и реальными числами ещё не выполнено: C#-проект в доступной папке не содержит solution/project для сборки, а dotnet отсутствует. Для этого нужны исходная книга эксперимента <code>*.xlsx</code>, соответствующая ей книга <code>*AllData.xlsx</code> из того же расчёта, и документ/протокол, подтверждающий шкалу EE (0–1 или 0–100). Передайте именно согласованную пару книг, а не два разных опыта.</p>
+        <p class="method-warning">Независимое сравнение с запущенной C# программой и реальными числами ещё не выполнено. В источниках есть solution/project, но в проверенной среде нет <code>dotnet</code> для сборки; наличие Excel automation и конкретной версии Office также не подтверждено. Для численной сверки нужны согласованные исходная книга <code>*.xlsx</code> и результат <code>*AllData.xlsx</code> от одного запуска, а для подтверждения смысла EE — документ или протокол, указывающий шкалу ввода (0–1 или 0–100).</p>
         <p>Проверенные файлы исходника: <code>ChemicalInfo/SampleModel/TryDataForViewModel.cs</code>, <code>ChemicalInfo/Data/SampleAllDataForViewModel.cs</code>, <code>ChemicalInfo/SampleModel/DrugReleaseModel/DrugReleaseForViewModel.cs</code>, <code>InfoApp/ViewModel/MethodsForCommonComands/WorkWithExcelFile.cs</code>, <code>WorkWithWordAndExcel/ConnectionWithExcel.cs</code> и <code>InfoApp/View/AddView/AddSample.xaml</code>.</p>
     </section>
 </main>

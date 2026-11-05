@@ -331,9 +331,8 @@ def _transform_source_point(model_key, time, release):
 def transform_source_model(points, model_key, *, include_records=True):
     """Return source-C# transformed coordinates without fitting a regression.
 
-    The original C# project constructs these coordinates for chart series but
-    does not define regression coefficients or R²/RMSE for them. Invalid
-    domains and source-specific t=0 omissions are retained as explicit rows.
+    Invalid domains and source-specific t=0 omissions are retained as explicit
+    rows so the caller can review the points used in a separate fit.
     """
 
     definition = next(
@@ -412,6 +411,96 @@ def summarize_source_model_transforms(points):
         }
         for definition in SOURCE_MODEL_DEFINITIONS
     )
+
+
+def fit_linear_trendline(points):
+    """Fit an unweighted straight line with a free intercept to finite pairs.
+
+    This is a Django reconstruction of the linear trendline applied to the
+    source-transformed coordinates. It does not certify numerical parity with
+    a particular Excel version or workbook.
+    """
+
+    usable_points = []
+    input_count = 0
+    for point in points:
+        input_count += 1
+        try:
+            x_value = float(point[0])
+            y_value = float(point[1])
+        except (TypeError, ValueError, OverflowError, IndexError, KeyError):
+            continue
+        if math.isfinite(x_value) and math.isfinite(y_value):
+            usable_points.append((x_value, y_value))
+
+    point_count = len(usable_points)
+    excluded_count = input_count - point_count
+    result = {
+        "success": False,
+        "slope": None,
+        "intercept": None,
+        "r_squared": None,
+        "point_count": point_count,
+        "excluded_count": excluded_count,
+        "points": tuple(usable_points),
+        "error": "",
+    }
+    if point_count < 2:
+        result["error"] = "Для линейной подгонки нужны минимум две конечные пары координат."
+        return result
+
+    x_scale = max(abs(x_value) for x_value, _ in usable_points)
+    y_scale = max(abs(y_value) for _, y_value in usable_points)
+    normalized_x = [
+        x_value / x_scale if x_scale else 0.0
+        for x_value, _ in usable_points
+    ]
+    normalized_y = [
+        y_value / y_scale if y_scale else 0.0
+        for _, y_value in usable_points
+    ]
+    mean_x = math.fsum(normalized_x) / point_count
+    mean_y = math.fsum(normalized_y) / point_count
+    centered_x = [value - mean_x for value in normalized_x]
+    centered_y = [value - mean_y for value in normalized_y]
+    sum_x_squared = math.fsum(value * value for value in centered_x)
+    if sum_x_squared == 0 or x_scale == 0:
+        result["error"] = "Линейная подгонка невозможна: все значения X одинаковы."
+        return result
+
+    sum_xy = math.fsum(
+        x_value * y_value
+        for x_value, y_value in zip(centered_x, centered_y)
+    )
+    normalized_slope = sum_xy / sum_x_squared
+    normalized_intercept = mean_y - normalized_slope * mean_x
+    try:
+        slope = normalized_slope * y_scale / x_scale
+        intercept = normalized_intercept * y_scale
+    except OverflowError:
+        slope = intercept = math.inf
+    if not math.isfinite(slope) or not math.isfinite(intercept):
+        result["error"] = "Коэффициенты линейной подгонки выходят за числовой диапазон."
+        return result
+
+    total_sum = math.fsum(value * value for value in centered_y)
+    if total_sum:
+        residual_sum = math.fsum(
+            (actual - (normalized_intercept + normalized_slope * x_value)) ** 2
+            for x_value, actual in zip(normalized_x, normalized_y)
+        )
+        r_squared = min(1.0, max(0.0, 1.0 - residual_sum / total_sum))
+    else:
+        r_squared = None
+
+    result.update({
+        "success": True,
+        "slope": slope,
+        "intercept": intercept,
+        "r_squared": r_squared,
+        "error": "",
+    })
+    return result
 
 
 def recalculate_experiment(experiment):

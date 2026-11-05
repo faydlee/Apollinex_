@@ -18,6 +18,8 @@
     .analysis-button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--blue); color: white; font: inherit; font-weight: 700; cursor: pointer; }
     .analysis-button:hover { background: var(--blue-dark); }
     .analysis-export { display: inline-flex; align-items: center; margin: 12px 10px 0 0; text-decoration: none; }
+    .comparison-actions { display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0 18px; }
+    .comparison-actions .analysis-export { margin: 0; }
     .analysis-warning { margin: 14px 0 0; padding: 13px 15px; border: 1px solid #f0dfad; border-radius: 9px; background: #fff9e8; color: #795b0b; }
     .analysis-note { margin: 0 0 14px; color: var(--muted); }
     .analysis-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
@@ -69,8 +71,10 @@
     {% if selected_experiments %}
         <section class="analysis-card" aria-labelledby="comparison-summary-title">
             <h2 id="comparison-summary-title">Основные данные</h2>
-            <a class="analysis-button analysis-export" href="{% url 'comparison_export_xlsx' %}?{{ selection_query }}">Скачать сравнение Excel</a>
-            <a class="analysis-button analysis-export" href="{% url 'comparison' %}?{{ selection_query }}&amp;compare_models=1">Сравнить модели Django</a>
+            <div class="comparison-actions">
+                <a class="analysis-button analysis-export" href="{% url 'comparison_export_xlsx' %}?{{ selection_query }}">Скачать сравнение Excel</a>
+                <a class="analysis-button analysis-export" href="{% url 'comparison' %}?{{ selection_query }}&amp;compare_models=1">Сравнить модели</a>
+            </div>
             <div class="analysis-table-wrap">
                 <table class="analysis-table">
                     <thead><tr><th scope="col">Эксперимент</th><th scope="col">Формат источника</th><th scope="col">Метод</th><th scope="col">Единицы</th><th scope="col">Измерений</th><th scope="col">Диапазон времени</th><th scope="col">Диапазон высвобождения</th></tr></thead>

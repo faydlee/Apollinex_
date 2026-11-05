@@ -17,12 +17,34 @@
     {% if source_coordinate_source == "imported" %}
         Показаны координаты модели «{{ selected_source_model.name }}», сохранённые из книги C# AllData. Строки и порядок сохранены при импорте; Django их не пересчитывал.
     {% else %}
-        Показано преобразование «{{ selected_source_model.name }}» по подтверждённым правилам C# для сохранённых точек Time/Release. Это координаты преобразования, без линейной подгонки C#.
+        Показано преобразование «{{ selected_source_model.name }}» по подтверждённым правилам C# для сохранённых точек Time/Release. Коэффициенты трендлайна ниже Django вычисляет отдельно по этим координатам.
     {% endif %}
     Формулы: X = {{ selected_source_model.x_formula }}, Y = {{ selected_source_model.y_formula }}. Для текущей таблицы: {{ source_coordinate_count }} строк.
     По сохранённым Time/Release: {{ source_transform_counts.included_count }} использованы, {{ source_transform_counts.source_omission_count }} исключены правилом t = 0, {{ source_transform_counts.invalid_domain_count }} исключены из-за области определения. Эти количества относятся к повторному преобразованию сохранённых значений, а таблица AllData ниже остаётся исходной.
     {% if source_coordinate_source == "imported" %}<a href="{% url 'imported_model_points_csv' source_coordinate_experiment_id selected_source_model.key %}">Скачать исходные координаты CSV</a>{% else %}<a href="{% url 'source_transform_csv' source_coordinate_experiment_id selected_source_model.key %}">Скачать преобразованные координаты CSV</a>{% endif %}
 </p>
+
+<section class="source-coordinate-fit" aria-labelledby="source-coordinate-fit-title">
+    <h3 class="kinetic-model-title" id="source-coordinate-fit-title">Линейная подгонка преобразованных координат (реконструкция Excel xlLinear)</h3>
+    <p class="kinetic-model-note">
+        Подгонка выполнена Django обычным невзвешенным методом наименьших квадратов со свободным пересечением. Источник: {% if source_coordinate_source == "imported" %}конечные пары X/Y, сохранённые из AllData.xlsx{% else %}конечные пары X/Y, преобразованные из сохранённых Time/Release{% endif %}. Использовано точек: {{ source_coordinate_linear_fit.point_count }}; исключено неконечных или отсутствующих пар: {{ source_coordinate_linear_fit.excluded_count }}. SD не применяется. Это реконструкция линейного трендлайна, а численное совпадение с Excel для конкретной книги и версии пока не подтверждено.
+    </p>
+    {% if source_coordinate_linear_fit.success %}
+        <div class="kinetic-metric-grid">
+            <div class="kinetic-metric"><span class="kinetic-metric-label">Уравнение</span><span class="kinetic-metric-value">Y = {{ source_coordinate_linear_fit_display.slope }} × X + ({{ source_coordinate_linear_fit_display.intercept }})</span></div>
+            <div class="kinetic-metric"><span class="kinetic-metric-label">Наклон m</span><span class="kinetic-metric-value">{{ source_coordinate_linear_fit_display.slope }}</span></div>
+            <div class="kinetic-metric"><span class="kinetic-metric-label">Пересечение b</span><span class="kinetic-metric-value">{{ source_coordinate_linear_fit_display.intercept }}</span></div>
+            <div class="kinetic-metric"><span class="kinetic-metric-label">R² в преобразованной шкале Y</span><span class="kinetic-metric-value">{% if source_coordinate_linear_fit.r_squared != None %}{{ source_coordinate_linear_fit_display.r_squared }}{% else %}не определяется для постоянного Y{% endif %}</span></div>
+        </div>
+        {% if source_coordinate_linear_plot %}
+            <img class="kinetic-plot" src="data:image/png;base64,{{ source_coordinate_linear_plot }}" alt="Линейная подгонка {{ selected_source_model.name }} по преобразованным координатам">
+        {% elif source_coordinate_linear_plot_error %}
+            <p class="kinetic-unavailable" role="status">Не удалось построить график; коэффициенты и таблица доступны.</p>
+        {% endif %}
+    {% else %}
+        <p class="kinetic-unavailable" role="status">{{ source_coordinate_linear_fit.error }}</p>
+    {% endif %}
+</section>
 
 {% if source_coordinate_page.object_list %}
     <div class="kinetic-results-wrap">
